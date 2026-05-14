@@ -8,14 +8,14 @@ from wifi_config import WIFI_SSID, WIFI_PASSWORD
 # =============================================
 # 하드웨어 설정
 # =============================================
-gas_sensor = ADC(Pin(26))       # MQ2 센서 → GP26 (ADC0)
+gas_sensor = ADC(Pin(26))
 
-led_green  = Pin(13, Pin.OUT)   # 초록 LED → GP13
-led_yellow = Pin(12, Pin.OUT)   # 노랑 LED → GP12
-led_red    = Pin(11, Pin.OUT)   # 빨강 LED → GP11
+led_green  = Pin(13, Pin.OUT)
+led_yellow = Pin(12, Pin.OUT)
+led_red    = Pin(11, Pin.OUT)
 
 # =============================================
-# 전역 변수 (최근 50개 데이터 저장)
+# 전역 변수
 # =============================================
 sensor_data = []
 MAX_DATA    = 50
@@ -29,19 +29,15 @@ def all_led_off():
     led_red.value(0)
 
 def update_led(raw):
-    # ↓ 기준값 낮춰서 더 민감하게!
-    if raw < 10000:
+    if raw < 30000:
         all_led_off()
         led_green.value(1)
-
-    elif raw < 25000:
+    elif raw < 45000:
         all_led_off()
         led_yellow.value(1)
-
-    elif raw < 40000:
+    elif raw < 57000:
         all_led_off()
         led_red.value(1)
-
     else:
         all_led_off()
         for _ in range(3):
@@ -57,14 +53,14 @@ def get_gas_percentage(raw):
     return round((raw / 65535) * 100, 1)
 
 # =============================================
-# 위험 단계 텍스트 반환 (기준값 낮춤!)
+# 위험 단계 반환
 # =============================================
 def get_status(raw):
-    if raw < 10000:
+    if raw < 30000:
         return "안전"
-    elif raw < 25000:
+    elif raw < 45000:
         return "주의"
-    elif raw < 40000:
+    elif raw < 57000:
         return "위험"
     else:
         return "긴급"
@@ -94,7 +90,7 @@ def connect_wifi():
     return ip
 
 # =============================================
-# HTML 페이지 (그래프 크게 + 민감도 반영)
+# HTML 페이지
 # =============================================
 def get_html():
     return """<!DOCTYPE html>
@@ -157,12 +153,11 @@ def get_html():
             color: #00d4ff;
         }
 
-        /* 그래프 박스 크게! */
         .chart-box {
             background: #16213e;
             border-radius: 10px;
             padding: 20px;
-            height: 500px;        /* ← 높이 크게 */
+            height: 500px;
         }
 
         .chart-box canvas {
@@ -170,7 +165,6 @@ def get_html():
             height: 100% !important;
         }
 
-        /* 단계별 기준선 범례 */
         .legend-box {
             display: grid;
             grid-template-columns: 1fr 1fr 1fr 1fr;
@@ -201,48 +195,41 @@ def get_html():
 <body>
     <h1>💊🧪 약품 실험실 안전 모니터링</h1>
 
-    <!-- 현재 상태 박스 -->
     <div class="status-box safe" id="statusBox">
         🟢 안전
     </div>
 
-    <!-- 수치 카드 -->
     <div class="info-grid">
         <div class="info-card">
             <div class="label">센서 원시값</div>
-            <div class="value" id="rawValue">-</div>
+            <div class="value" id="rawValue">불러오는 중...</div>
         </div>
         <div class="info-card">
             <div class="label">가스 농도</div>
-            <div class="value" id="gasPercent">- %</div>
+            <div class="value" id="gasPercent">불러오는 중...</div>
         </div>
     </div>
 
-    <!-- 단계 기준 범례 -->
     <div class="legend-box">
         <div class="legend-item safe">
-            🟢 안전<br>0 ~ 15%
+            🟢 안전<br>0 ~ 46%
         </div>
         <div class="legend-item caution">
-            🟡 주의<br>15 ~ 38%
+            🟡 주의<br>46 ~ 69%
         </div>
         <div class="legend-item danger">
-            🔴 위험<br>38 ~ 61%
+            🔴 위험<br>69 ~ 87%
         </div>
         <div class="legend-item emergency">
-            🚨 긴급<br>61% 이상
+            🚨 긴급<br>87% 이상
         </div>
     </div>
 
-    <!-- 실시간 그래프 -->
     <div class="chart-box">
         <canvas id="gasChart"></canvas>
     </div>
 
     <script>
-        // =============================================
-        // Chart.js 설정 (그래프 크게 + 세밀하게!)
-        // =============================================
         const ctx = document.getElementById('gasChart').getContext('2d');
 
         const chart = new Chart(ctx, {
@@ -260,9 +247,8 @@ def get_html():
                         fill: true,
                         tension: 0.4
                     },
-                    // 안전 기준선
                     {
-                        label: '주의 기준 (15%)',
+                        label: '주의 기준 (46%)',
                         data: [],
                         borderColor: '#ffff00',
                         borderWidth: 1,
@@ -270,9 +256,8 @@ def get_html():
                         pointRadius: 0,
                         fill: false
                     },
-                    // 위험 기준선
                     {
-                        label: '위험 기준 (38%)',
+                        label: '위험 기준 (69%)',
                         data: [],
                         borderColor: '#ff4444',
                         borderWidth: 1,
@@ -280,9 +265,8 @@ def get_html():
                         pointRadius: 0,
                         fill: false
                     },
-                    // 긴급 기준선
                     {
-                        label: '긴급 기준 (61%)',
+                        label: '긴급 기준 (87%)',
                         data: [],
                         borderColor: '#ff0000',
                         borderWidth: 2,
@@ -294,7 +278,7 @@ def get_html():
             },
             options: {
                 responsive: true,
-                maintainAspectRatio: false,  // ← 높이 자유롭게!
+                maintainAspectRatio: false,
                 animation: { duration: 200 },
                 scales: {
                     y: {
@@ -302,7 +286,7 @@ def get_html():
                         max: 100,
                         ticks: {
                             color: '#aaa',
-                            stepSize: 5,          // ← 5% 간격으로 세밀하게!
+                            stepSize: 5,
                             callback: val => val + '%'
                         },
                         grid: { color: '#2a2a4a' }
@@ -329,7 +313,7 @@ def get_html():
         });
 
         // =============================================
-        // 상태에 따라 배경색 변경
+        // 상태 박스 업데이트
         // =============================================
         function updateStatusBox(status) {
             const box = document.getElementById('statusBox');
@@ -351,32 +335,33 @@ def get_html():
         }
 
         // =============================================
-        // 0.5초마다 /data 에서 데이터 가져오기
+        // 데이터 가져오기 (오류 처리 강화!)
         // =============================================
         function fetchData() {
             fetch('/data')
-                .then(res => res.json())
+                .then(res => {
+                    if (!res.ok) throw new Error('응답 오류');
+                    return res.json();
+                })
                 .then(data => {
-                    // 수치 업데이트
-                    document.getElementById('rawValue').textContent   = data.raw;
-                    document.getElementById('gasPercent').textContent = data.percent + '%';
+                    // ✅ null/undefined 체크 후 업데이트
+                    if (data.raw !== undefined) {
+                        document.getElementById('rawValue').textContent = data.raw;
+                    }
+                    if (data.percent !== undefined) {
+                        document.getElementById('gasPercent').textContent = data.percent + '%';
+                    }
+                    if (data.status !== undefined) {
+                        updateStatusBox(data.status);
+                    }
 
-                    // 상태 박스 업데이트
-                    updateStatusBox(data.status);
-
-                    // 시간 라벨
                     const now = new Date().toLocaleTimeString();
-
-                    // 실측 데이터 추가
                     chart.data.labels.push(now);
                     chart.data.datasets[0].data.push(data.percent);
+                    chart.data.datasets[1].data.push(46);
+                    chart.data.datasets[2].data.push(69);
+                    chart.data.datasets[3].data.push(87);
 
-                    // 기준선 데이터 추가
-                    chart.data.datasets[1].data.push(15);   // 주의 기준
-                    chart.data.datasets[2].data.push(38);   // 위험 기준
-                    chart.data.datasets[3].data.push(61);   // 긴급 기준
-
-                    // 최대 50개 유지
                     if (chart.data.labels.length > 50) {
                         chart.data.labels.shift();
                         chart.data.datasets.forEach(ds => ds.data.shift());
@@ -384,10 +369,14 @@ def get_html():
 
                     chart.update();
                 })
-                .catch(err => console.log('데이터 오류:', err));
+                .catch(err => {
+                    // ✅ 오류 시 화면에 표시
+                    document.getElementById('rawValue').textContent  = '연결 오류';
+                    document.getElementById('gasPercent').textContent = '연결 오류';
+                    console.log('데이터 오류:', err);
+                });
         }
 
-        // 0.5초마다 실행
         setInterval(fetchData, 500);
         fetchData();
     </script>
@@ -395,11 +384,12 @@ def get_html():
 </html>"""
 
 # =============================================
-# HTTP 요청 처리
+# HTTP 요청 처리 (JSON 응답 수정!)
 # =============================================
 def handle_request(conn):
     try:
         request = conn.recv(1024).decode()
+        print(f"요청 받음: {request[:50]}")  # 디버깅용
 
         if 'GET /data' in request:
             raw     = gas_sensor.read_u16()
@@ -407,6 +397,9 @@ def handle_request(conn):
             status  = get_status(raw)
 
             update_led(raw)
+
+            # 디버깅용 출력
+            print(f"raw: {raw} | percent: {percent} | status: {status}")
 
             sensor_data.append(percent)
             if len(sensor_data) > MAX_DATA:
@@ -422,6 +415,7 @@ def handle_request(conn):
                 "HTTP/1.1 200 OK\r\n"
                 "Content-Type: application/json\r\n"
                 "Access-Control-Allow-Origin: *\r\n"
+                "Connection: close\r\n"    
                 "\r\n" + response_body
             )
 
@@ -430,6 +424,7 @@ def handle_request(conn):
             response = (
                 "HTTP/1.1 200 OK\r\n"
                 "Content-Type: text/html; charset=utf-8\r\n"
+                "Connection: close\r\n"    
                 "\r\n" + html
             )
 
@@ -466,6 +461,5 @@ while True:
     try:
         conn, addr = server.accept()
         handle_request(conn)
-
     except Exception as e:
         print(f"서버 오류: {e}")
