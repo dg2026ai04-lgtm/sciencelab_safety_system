@@ -2,14 +2,13 @@ from machine import Pin, ADC
 import time
 
 # =============================================
-# 핀 설정 (안전한 핀 번호로 수정!)
+# 핀 설정 (Raspberry Pi Pico 2 WH용!)
 # =============================================
-mq2 = ADC(Pin(36))          # MQ2 센서 → GPIO36 (VP핀, 입력 전용)
-mq2.atten(ADC.ATTN_11DB)    # 0 ~ 3.3V 범위 측정
+mq2 = ADC(Pin(26))          # MQ2 센서 → GP26 (ADC0)
 
-led_green  = Pin(13, Pin.OUT)  # 초록 LED → GPIO13
-led_yellow = Pin(12, Pin.OUT)  # 노랑 LED → GPIO12
-led_red    = Pin(14, Pin.OUT)  # 빨강 LED → GPIO14
+led_green  = Pin(13, Pin.OUT)  # 초록 LED → GP13
+led_yellow = Pin(12, Pin.OUT)  # 노랑 LED → GP12
+led_red    = Pin(11, Pin.OUT)  # 빨강 LED → GP11
 
 # =============================================
 # 모든 LED 끄기
@@ -57,9 +56,10 @@ def emergency_mode():
 
 # =============================================
 # 센서값 → 백분율로 변환 (0 ~ 100%)
+# Pico는 0 ~ 65535 범위!
 # =============================================
 def get_gas_percentage(raw_value):
-    percentage = (raw_value / 4095) * 100
+    percentage = (raw_value / 65535) * 100
     return round(percentage, 1)
 
 # =============================================
@@ -71,18 +71,18 @@ print("  MQ2 센서 + LED 경고 시스템 가동 중")
 print("=" * 40)
 
 while True:
-    raw = mq2.read()
+    raw = mq2.read_u16()        # Pico는 read_u16() 사용!
     gas_level = get_gas_percentage(raw)
 
     print(f"센서 원시값: {raw} | 가스 농도: {gas_level}%")
 
-    if raw < 300:
+    if raw < 20000:
         safe_mode()
 
-    elif raw < 600:
+    elif raw < 40000:
         caution_mode()
 
-    elif raw < 800:
+    elif raw < 55000:
         danger_mode()
 
     else:
