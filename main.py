@@ -29,15 +29,16 @@ def all_led_off():
     led_red.value(0)
 
 def update_led(raw):
-    if raw < 20000:
+    # ↓ 기준값 낮춰서 더 민감하게!
+    if raw < 10000:
         all_led_off()
         led_green.value(1)
 
-    elif raw < 40000:
+    elif raw < 25000:
         all_led_off()
         led_yellow.value(1)
 
-    elif raw < 55000:
+    elif raw < 40000:
         all_led_off()
         led_red.value(1)
 
@@ -56,14 +57,14 @@ def get_gas_percentage(raw):
     return round((raw / 65535) * 100, 1)
 
 # =============================================
-# 위험 단계 텍스트 반환
+# 위험 단계 텍스트 반환 (기준값 낮춤!)
 # =============================================
 def get_status(raw):
-    if raw < 20000:
+    if raw < 10000:
         return "안전"
-    elif raw < 40000:
+    elif raw < 25000:
         return "주의"
-    elif raw < 55000:
+    elif raw < 40000:
         return "위험"
     else:
         return "긴급"
@@ -93,7 +94,7 @@ def connect_wifi():
     return ip
 
 # =============================================
-# HTML 페이지 (Chart.js 사용)
+# HTML 페이지 (그래프 크게 + 민감도 반영)
 # =============================================
 def get_html():
     return """<!DOCTYPE html>
@@ -156,16 +157,39 @@ def get_html():
             color: #00d4ff;
         }
 
+        /* 그래프 박스 크게! */
         .chart-box {
             background: #16213e;
             border-radius: 10px;
-            padding: 15px;
+            padding: 20px;
+            height: 500px;        /* ← 높이 크게 */
         }
 
-        .safe     { background: #1a5c1a; }
-        .caution  { background: #5c5c1a; }
-        .danger   { background: #5c1a1a; }
-        .emergency{ background: #8b0000; animation: blink 0.5s infinite; }
+        .chart-box canvas {
+            width: 100% !important;
+            height: 100% !important;
+        }
+
+        /* 단계별 기준선 범례 */
+        .legend-box {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr 1fr;
+            gap: 8px;
+            margin-bottom: 20px;
+        }
+
+        .legend-item {
+            border-radius: 8px;
+            padding: 8px;
+            text-align: center;
+            font-size: 0.75em;
+            font-weight: bold;
+        }
+
+        .safe      { background: #1a5c1a; }
+        .caution   { background: #5c5c1a; }
+        .danger    { background: #5c1a1a; }
+        .emergency { background: #8b0000; animation: blink 0.5s infinite; }
 
         @keyframes blink {
             0%   { opacity: 1; }
@@ -177,10 +201,12 @@ def get_html():
 <body>
     <h1>💊🧪 약품 실험실 안전 모니터링</h1>
 
+    <!-- 현재 상태 박스 -->
     <div class="status-box safe" id="statusBox">
         🟢 안전
     </div>
 
+    <!-- 수치 카드 -->
     <div class="info-grid">
         <div class="info-card">
             <div class="label">센서 원시값</div>
@@ -192,13 +218,30 @@ def get_html():
         </div>
     </div>
 
+    <!-- 단계 기준 범례 -->
+    <div class="legend-box">
+        <div class="legend-item safe">
+            🟢 안전<br>0 ~ 15%
+        </div>
+        <div class="legend-item caution">
+            🟡 주의<br>15 ~ 38%
+        </div>
+        <div class="legend-item danger">
+            🔴 위험<br>38 ~ 61%
+        </div>
+        <div class="legend-item emergency">
+            🚨 긴급<br>61% 이상
+        </div>
+    </div>
+
+    <!-- 실시간 그래프 -->
     <div class="chart-box">
         <canvas id="gasChart"></canvas>
     </div>
 
     <script>
         // =============================================
-        // Chart.js 설정
+        // Chart.js 설정 (그래프 크게 + 세밀하게!)
         // =============================================
         const ctx = document.getElementById('gasChart').getContext('2d');
 
@@ -206,34 +249,81 @@ def get_html():
             type: 'line',
             data: {
                 labels: [],
-                datasets: [{
-                    label: '가스 농도 (%)',
-                    data: [],
-                    borderColor: '#00d4ff',
-                    backgroundColor: 'rgba(0, 212, 255, 0.1)',
-                    borderWidth: 2,
-                    pointRadius: 2,
-                    fill: true,
-                    tension: 0.4
-                }]
+                datasets: [
+                    {
+                        label: '가스 농도 (%)',
+                        data: [],
+                        borderColor: '#00d4ff',
+                        backgroundColor: 'rgba(0, 212, 255, 0.1)',
+                        borderWidth: 2,
+                        pointRadius: 3,
+                        fill: true,
+                        tension: 0.4
+                    },
+                    // 안전 기준선
+                    {
+                        label: '주의 기준 (15%)',
+                        data: [],
+                        borderColor: '#ffff00',
+                        borderWidth: 1,
+                        borderDash: [5, 5],
+                        pointRadius: 0,
+                        fill: false
+                    },
+                    // 위험 기준선
+                    {
+                        label: '위험 기준 (38%)',
+                        data: [],
+                        borderColor: '#ff4444',
+                        borderWidth: 1,
+                        borderDash: [5, 5],
+                        pointRadius: 0,
+                        fill: false
+                    },
+                    // 긴급 기준선
+                    {
+                        label: '긴급 기준 (61%)',
+                        data: [],
+                        borderColor: '#ff0000',
+                        borderWidth: 2,
+                        borderDash: [8, 4],
+                        pointRadius: 0,
+                        fill: false
+                    }
+                ]
             },
             options: {
                 responsive: true,
-                animation: { duration: 300 },
+                maintainAspectRatio: false,  // ← 높이 자유롭게!
+                animation: { duration: 200 },
                 scales: {
                     y: {
                         min: 0,
                         max: 100,
-                        ticks: { color: '#888' },
-                        grid: { color: '#333' }
+                        ticks: {
+                            color: '#aaa',
+                            stepSize: 5,          // ← 5% 간격으로 세밀하게!
+                            callback: val => val + '%'
+                        },
+                        grid: { color: '#2a2a4a' }
                     },
                     x: {
-                        ticks: { color: '#888', maxTicksLimit: 10 },
-                        grid: { color: '#333' }
+                        ticks: {
+                            color: '#aaa',
+                            maxTicksLimit: 10
+                        },
+                        grid: { color: '#2a2a4a' }
                     }
                 },
                 plugins: {
-                    legend: { labels: { color: 'white' } }
+                    legend: {
+                        labels: { color: 'white', font: { size: 11 } }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: ctx => ctx.dataset.label + ': ' + ctx.parsed.y + '%'
+                        }
+                    }
                 }
             }
         });
@@ -274,15 +364,22 @@ def get_html():
                     // 상태 박스 업데이트
                     updateStatusBox(data.status);
 
-                    // 차트 업데이트
+                    // 시간 라벨
                     const now = new Date().toLocaleTimeString();
+
+                    // 실측 데이터 추가
                     chart.data.labels.push(now);
                     chart.data.datasets[0].data.push(data.percent);
+
+                    // 기준선 데이터 추가
+                    chart.data.datasets[1].data.push(15);   // 주의 기준
+                    chart.data.datasets[2].data.push(38);   // 위험 기준
+                    chart.data.datasets[3].data.push(61);   // 긴급 기준
 
                     // 최대 50개 유지
                     if (chart.data.labels.length > 50) {
                         chart.data.labels.shift();
-                        chart.data.datasets[0].data.shift();
+                        chart.data.datasets.forEach(ds => ds.data.shift());
                     }
 
                     chart.update();
@@ -303,18 +400,14 @@ def get_html():
 def handle_request(conn):
     try:
         request = conn.recv(1024).decode()
-        
-        # 경로 확인
+
         if 'GET /data' in request:
-            # /data → JSON 응답
             raw     = gas_sensor.read_u16()
             percent = get_gas_percentage(raw)
             status  = get_status(raw)
 
-            # LED 업데이트
             update_led(raw)
 
-            # sensor_data 리스트에 저장
             sensor_data.append(percent)
             if len(sensor_data) > MAX_DATA:
                 sensor_data.pop(0)
@@ -333,7 +426,6 @@ def handle_request(conn):
             )
 
         else:
-            # 그 외 → HTML 페이지 응답
             html = get_html()
             response = (
                 "HTTP/1.1 200 OK\r\n"
@@ -357,13 +449,11 @@ print("  약품 실험실 스마트 안전 관리 시스템")
 print("  Raspberry Pi Pico 2 WH + MQ2 센서")
 print("=" * 40)
 
-# Wi-Fi 연결
 ip = connect_wifi()
 if ip is None:
     print("Wi-Fi 연결 실패 → 프로그램 종료")
     raise SystemExit
 
-# 소켓 서버 시작
 server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 server.bind(('0.0.0.0', 80))
@@ -372,7 +462,6 @@ server.listen(5)
 print(f"웹서버 시작! → http://{ip}")
 print("=" * 40)
 
-# 요청 대기 루프
 while True:
     try:
         conn, addr = server.accept()
