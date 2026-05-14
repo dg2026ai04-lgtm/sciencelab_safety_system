@@ -2,14 +2,14 @@ from machine import Pin, ADC
 import time
 
 # =============================================
-# 핀 설정
+# 핀 설정 (안전한 핀 번호로 수정!)
 # =============================================
-mq2 = ADC(Pin(34))          # MQ2 센서 (아날로그 입력)
+mq2 = ADC(Pin(36))          # MQ2 센서 → GPIO36 (VP핀, 입력 전용)
 mq2.atten(ADC.ATTN_11DB)    # 0 ~ 3.3V 범위 측정
 
-led_green  = Pin(25, Pin.OUT)  # 초록 LED
-led_yellow = Pin(26, Pin.OUT)  # 노랑 LED
-led_red    = Pin(27, Pin.OUT)  # 빨강 LED
+led_green  = Pin(13, Pin.OUT)  # 초록 LED → GPIO13
+led_yellow = Pin(12, Pin.OUT)  # 노랑 LED → GPIO12
+led_red    = Pin(14, Pin.OUT)  # 빨강 LED → GPIO14
 
 # =============================================
 # 모든 LED 끄기
@@ -49,7 +49,7 @@ def danger_mode():
 def emergency_mode():
     all_led_off()
     print("[긴급] 즉시 대피! 빨강 LED 점멸")
-    for _ in range(5):          # 5회 빠르게 깜빡임
+    for _ in range(5):
         led_red.value(1)
         time.sleep(0.1)
         led_red.value(0)
@@ -71,13 +71,11 @@ print("  MQ2 센서 + LED 경고 시스템 가동 중")
 print("=" * 40)
 
 while True:
-    # 센서값 읽기
     raw = mq2.read()
     gas_level = get_gas_percentage(raw)
 
     print(f"센서 원시값: {raw} | 가스 농도: {gas_level}%")
 
-    # 단계별 판단 및 LED 제어
     if raw < 300:
         safe_mode()
 
@@ -91,4 +89,4 @@ while True:
         emergency_mode()
 
     print("-" * 40)
-    time.sleep(1)    # 1초마다 측정
+    time.sleep(1)
