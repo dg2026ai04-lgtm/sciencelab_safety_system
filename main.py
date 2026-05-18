@@ -140,7 +140,6 @@ var LN=[
 {p:69,c:'rgba(255,80,80,.6)',t:'위험69%'},
 {p:87,c:'rgba(255,0,0,.9)',t:'긴급87%'}
 ];
-
 function draw(){
 var W=cv.offsetWidth||700,H=260;
 cv.width=W;cv.height=H;
@@ -178,37 +177,35 @@ cx.beginPath();cx.arc(lxp,lyp,5,0,Math.PI*2);
 cx.fillStyle='#00d4ff';cx.fill();
 cx.fillStyle='#00d4ff';cx.font='bold 11px sans-serif';
 cx.textAlign='center';cx.fillText(lv+'%',lxp,lyp-10);}
-
 var SC={
 safe:{c:'sb safe',t:'🟢 안전'},
 caution:{c:'sb caution',t:'🟡 주의'},
 danger:{c:'sb danger',t:'🔴 위험'},
 emergency:{c:'sb emergency',t:'🚨 긴급 대피!'}};
-
 var ec=0;
 var busy=false;
-
 function fetchData(){
 if(busy)return;
 busy=true;
 var xhr=new XMLHttpRequest();
-xhr.timeout=2000;
+xhr.timeout=3000;
 xhr.open('GET','/data?t='+Date.now(),true);
 xhr.onreadystatechange=function(){
 if(xhr.readyState===4){
 busy=false;
 if(xhr.status===200){
 try{
-var d=JSON.parse(xhr.responseText);
+var txt=xhr.responseText.trim();
+var d=JSON.parse(txt);
 document.getElementById('rv').textContent=
-d.raw!==undefined?String(d.raw):'---';
+(d.raw!==undefined&&d.raw!==null)?String(d.raw):'---';
 document.getElementById('gp').textContent=
-d.percent!==undefined?String(d.percent)+' %':'--.- %';
+(d.percent!==undefined&&d.percent!==null)?String(d.percent)+' %':'--.- %';
 if(d.status){
 var s=SC[d.status]||SC.safe;
 var sb=document.getElementById('sb');
 sb.className=s.c;sb.textContent=s.t;}
-if(d.percent!==undefined){
+if(d.percent!==undefined&&d.percent!==null){
 da.push(Number(d.percent));
 if(da.length>MX)da.shift();
 draw();}
@@ -219,41 +216,36 @@ el.className='cs ok';
 el.textContent='✅ '+now+' 업데이트';
 }catch(e){
 ec++;
-document.getElementById('rv').textContent='파싱오류';
-document.getElementById('gp').textContent='파싱오류';
-}}else{
-ec++;
-document.getElementById('rv').textContent='오류'+xhr.status;
-document.getElementById('gp').textContent='오류';
+console.log('파싱실패:',xhr.responseText);
 var el=document.getElementById('cs');
 el.className='cs er';
-el.textContent='❌ HTTP오류 ('+ec+'번째)';}
+el.textContent='❌ 파싱오류: '+xhr.responseText.substring(0,30);
+}}else{
+ec++;
+var el=document.getElementById('cs');
+el.className='cs er';
+el.textContent='❌ HTTP'+xhr.status+' ('+ec+'번째)';}
 }};
 xhr.ontimeout=function(){
 busy=false;ec++;
-document.getElementById('rv').textContent='타임아웃';
-document.getElementById('gp').textContent='타임아웃';
 var el=document.getElementById('cs');
 el.className='cs er';
-el.textContent='❌ 타임아웃 ('+ec+'번째)';};
+el.textContent='❌ 타임아웃('+ec+'번째)';};
 xhr.onerror=function(){
 busy=false;ec++;
-document.getElementById('rv').textContent='연결실패';
-document.getElementById('gp').textContent='연결실패';
 var el=document.getElementById('cs');
 el.className='cs er';
-el.textContent='❌ 연결실패 ('+ec+'번째)';};
+el.textContent='❌ 연결실패('+ec+'번째)';};
 xhr.send();}
-
 window.addEventListener('load',function(){
 draw();
 fetchData();
-setInterval(fetchData,1000);});
+setInterval(fetchData,1500);});
 window.addEventListener('resize',draw);
 </script></body></html>"""
 
 # =============================================
-# /data 응답
+# /data 응답 (✅ 핵심 수정!)
 # =============================================
 def send_data(conn):
     raw     = gas_sensor.read_u16()
@@ -268,27 +260,29 @@ def send_data(conn):
     if len(sensor_data) > MAX_DATA:
         sensor_data.pop(0)
 
-    body = json.dumps({
-        "raw"    : raw,
-        "percent": percent,
-        "status" : status,
-        "korean" : korean
-    })
-    resp = (
+    # ✅ 숫자를 문자열로 직접 조립 (json.dumps 오류 방지)
+    body = (
+        '{"raw":' + str(raw) +
+        ',"percent":' + str(percent) +
+        ',"status":"' + status + '"' +
+        ',"korean":"' + korean + '"}'
+    )
+
+    header = (
         "HTTP/1.1 200 OK\r\n"
         "Content-Type: application/json\r\n"
         "Content-Length: " + str(len(body)) + "\r\n"
         "Access-Control-Allow-Origin: *\r\n"
-        "Access-Control-Allow-Methods: GET\r\n"
         "Cache-Control: no-cache\r\n"
         "Connection: close\r\n"
         "\r\n"
-        + body
     )
-    conn.sendall(resp.encode())
+    # ✅ 헤더와 바디 따로 전송
+    conn.sendall(header.encode())
+    conn.sendall(body.encode())
 
 # =============================================
-# HTML 응답 (512바이트씩 나눠서 전송)
+# HTML 응답
 # =============================================
 def send_html(conn):
     encoded = HTML.encode('utf-8')
