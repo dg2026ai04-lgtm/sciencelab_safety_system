@@ -2,6 +2,7 @@ import network
 import socket
 import time
 import json
+import neopixel
 from machine import Pin, ADC
 from wifi_config import WIFI_SSID, WIFI_PASSWORD
 
@@ -10,35 +11,44 @@ from wifi_config import WIFI_SSID, WIFI_PASSWORD
 # =============================================
 gas_sensor = ADC(Pin(26))
 
-# ✅ LED 한 개 GP16
-led = Pin(16, Pin.OUT)
+# ✅ 네오픽셀 설정
+TIMING   = (280, 515, 515, 745)
+NUM_LEDS = 10
+led      = neopixel.NeoPixel(Pin(16), NUM_LEDS, timing=TIMING)
 
 sensor_data = []
 MAX_DATA    = 50
 
 # =============================================
-# LED 제어 (단계별 깜빡임)
+# 네오픽셀 LED 제어
 # =============================================
-def led_blink(times, on_time, off_time):
-    for _ in range(times):
-        led.value(1)
-        time.sleep(on_time)
-        led.value(0)
-        time.sleep(off_time)
+def led_off():
+    for i in range(NUM_LEDS):
+        led[i] = (0, 0, 0)
+    led.write()
+
+def led_set_all(r, g, b):
+    for i in range(NUM_LEDS):
+        led[i] = (r, g, b)
+    led.write()
 
 def update_led(raw):
     if raw < 30000:
-        # 안전 → 천천히 1번
-        led_blink(1, 0.5, 0.5)
+        # 안전 → 초록
+        led_set_all(0, 80, 0)
     elif raw < 45000:
-        # 주의 → 2번
-        led_blink(2, 0.3, 0.2)
+        # 주의 → 노랑
+        led_set_all(80, 80, 0)
     elif raw < 57000:
-        # 위험 → 3번 빠르게
-        led_blink(3, 0.1, 0.1)
+        # 위험 → 빨강
+        led_set_all(80, 0, 0)
     else:
-        # 긴급 → 5번 매우 빠르게
-        led_blink(5, 0.05, 0.05)
+        # 긴급 → 빨강 빠르게 깜빡임
+        for _ in range(3):
+            led_set_all(150, 0, 0)
+            time.sleep(0.05)
+            led_off()
+            time.sleep(0.05)
 
 # =============================================
 # 센서값 변환
@@ -185,8 +195,7 @@ safe:{c:'sb safe',t:'🟢 안전'},
 caution:{c:'sb caution',t:'🟡 주의'},
 danger:{c:'sb danger',t:'🔴 위험'},
 emergency:{c:'sb emergency',t:'🚨 긴급 대피!'}};
-var ec=0;
-var busy=false;
+var ec=0;var busy=false;
 function fetchData(){
 if(busy)return;
 busy=true;
@@ -221,9 +230,8 @@ el.textContent='✅ '+now+' 업데이트';
 ec++;
 var el=document.getElementById('cs');
 el.className='cs er';
-el.textContent='❌ 파싱오류';}
-}else{
-ec++;
+el.textContent='❌ 파싱오류';}}
+else{ec++;
 var el=document.getElementById('cs');
 el.className='cs er';
 el.textContent='❌ HTTP'+xhr.status;}
@@ -258,7 +266,6 @@ def send_data(conn):
     body = ('{"raw":' + str(raw) +
             ',"percent":' + str(percent) +
             ',"status":"' + status + '"}')
-
     body_bytes = body.encode('utf-8')
 
     header = (
@@ -267,8 +274,7 @@ def send_data(conn):
         "Content-Length: " + str(len(body_bytes)) + "\r\n"
         "Access-Control-Allow-Origin: *\r\n"
         "Cache-Control: no-cache\r\n"
-        "Connection: close\r\n"
-        "\r\n"
+        "Connection: close\r\n\r\n"
     )
     conn.sendall(header.encode('utf-8'))
     conn.sendall(body_bytes)
@@ -319,6 +325,11 @@ print("=" * 40)
 print("  약품 실험실 스마트 안전 관리 시스템")
 print("  Raspberry Pi Pico 2 WH + MQ2 센서")
 print("=" * 40)
+
+# 시작할 때 LED 초록으로 켜서 정상 작동 확인!
+led_set_all(0, 80, 0)
+time.sleep(1)
+led_off()
 
 ip = connect_wifi()
 if ip is None:
