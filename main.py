@@ -76,7 +76,7 @@ def connect_wifi():
     return ip
 
 # =============================================
-# HTML (최소화 버전)
+# HTML
 # =============================================
 HTML = """<!DOCTYPE html><html lang="ko"><head>
 <meta charset="UTF-8">
@@ -91,21 +91,25 @@ font-size:1.8em;font-weight:bold;border:2px solid transparent}
 .safe{background:#0d3b0d;border-color:#00ff00;color:#00ff00}
 .caution{background:#3b3b0d;border-color:#ffff00;color:#ffff00}
 .danger{background:#3b0d0d;border-color:#ff4444;color:#ff4444}
-.emergency{background:#5c0000;border-color:#ff0000;color:#ff0000;animation:blink .4s infinite}
+.emergency{background:#5c0000;border-color:#ff0000;color:#ff0000;
+animation:blink .4s infinite}
 @keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
 .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:15px}
-.card{background:#16213e;border-radius:10px;padding:15px;text-align:center;border:1px solid #2a2a5a}
+.card{background:#16213e;border-radius:10px;padding:15px;text-align:center;
+border:1px solid #2a2a5a}
 .lbl{font-size:.8em;color:#888;margin-bottom:8px}
-.val{font-size:2em;font-weight:bold;color:#00d4ff;min-height:45px;display:flex;align-items:center;justify-content:center}
+.val{font-size:2em;font-weight:bold;color:#00d4ff;min-height:45px;
+display:flex;align-items:center;justify-content:center}
 .lgrid{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:6px;margin-bottom:15px}
 .li{border-radius:6px;padding:8px 4px;text-align:center;font-size:.72em;font-weight:bold}
 .ls{background:#0d3b0d;color:#00ff00}
 .lc{background:#3b3b0d;color:#ffff00}
 .ld{background:#3b0d0d;color:#ff4444}
 .le{background:#5c0000;color:#ff6666}
-.cbox{background:#16213e;border-radius:10px;padding:15px;border:1px solid #2a2a5a;margin-bottom:10px}
+.cbox{background:#16213e;border-radius:10px;padding:15px;
+border:1px solid #2a2a5a;margin-bottom:10px}
 .ct{color:#aaa;font-size:.85em;margin-bottom:8px}
-.cs{text-align:center;font-size:.75em;color:#555;margin-top:8px}
+.cs{text-align:center;font-size:.75em;margin-top:8px}
 .ok{color:#00ff00}.er{color:#ff4444}
 </style></head><body>
 <h1>💊🧪 약품 실험실 안전 모니터링</h1>
@@ -131,7 +135,12 @@ font-size:1.8em;font-weight:bold;border:2px solid transparent}
 var cv=document.getElementById('cv');
 var cx=cv.getContext('2d');
 var da=[];var MX=60;
-var LN=[{p:46,c:'rgba(255,255,0,.6)',t:'주의46%'},{p:69,c:'rgba(255,80,80,.6)',t:'위험69%'},{p:87,c:'rgba(255,0,0,.9)',t:'긴급87%'}];
+var LN=[
+{p:46,c:'rgba(255,255,0,.6)',t:'주의46%'},
+{p:69,c:'rgba(255,80,80,.6)',t:'위험69%'},
+{p:87,c:'rgba(255,0,0,.9)',t:'긴급87%'}
+];
+
 function draw(){
 var W=cv.offsetWidth||700,H=260;
 cv.width=W;cv.height=H;
@@ -141,8 +150,8 @@ cx.fillStyle='#16213e';cx.fillRect(0,0,W,H);
 var y=PT+GH-(p/100)*GH;
 cx.strokeStyle='#1e2a4a';cx.lineWidth=1;
 cx.beginPath();cx.moveTo(PL,y);cx.lineTo(PL+GW,y);cx.stroke();
-cx.fillStyle='#555';cx.font='10px sans-serif';cx.textAlign='right';
-cx.fillText(p+'%',PL-3,y+4);});
+cx.fillStyle='#555';cx.font='10px sans-serif';
+cx.textAlign='right';cx.fillText(p+'%',PL-3,y+4);});
 LN.forEach(function(ln){
 var y=PT+GH-(ln.p/100)*GH;
 cx.strokeStyle=ln.c;cx.lineWidth=1.5;cx.setLineDash([5,4]);
@@ -169,33 +178,84 @@ cx.beginPath();cx.arc(lxp,lyp,5,0,Math.PI*2);
 cx.fillStyle='#00d4ff';cx.fill();
 cx.fillStyle='#00d4ff';cx.font='bold 11px sans-serif';
 cx.textAlign='center';cx.fillText(lv+'%',lxp,lyp-10);}
-var SC={safe:{c:'sb safe',t:'🟢 안전'},caution:{c:'sb caution',t:'🟡 주의'},danger:{c:'sb danger',t:'🔴 위험'},emergency:{c:'sb emergency',t:'🚨 긴급 대피!'}};
+
+var SC={
+safe:{c:'sb safe',t:'🟢 안전'},
+caution:{c:'sb caution',t:'🟡 주의'},
+danger:{c:'sb danger',t:'🔴 위험'},
+emergency:{c:'sb emergency',t:'🚨 긴급 대피!'}};
+
 var ec=0;
+var busy=false;
+
 function fetchData(){
-fetch('/data',{cache:'no-store'})
-.then(function(r){if(!r.ok)throw new Error('err');return r.text();})
-.then(function(t){
-var d=JSON.parse(t);
-document.getElementById('rv').textContent=d.raw!==undefined?String(d.raw):'---';
-document.getElementById('gp').textContent=d.percent!==undefined?String(d.percent)+' %':'--.- %';
-if(d.status){var s=SC[d.status]||SC.safe;var sb=document.getElementById('sb');sb.className=s.c;sb.textContent=s.t;}
-if(d.percent!==undefined){da.push(Number(d.percent));if(da.length>MX)da.shift();draw();}
-ec=0;var now=new Date().toLocaleTimeString();
-var el=document.getElementById('cs');el.className='cs ok';el.textContent='✅ '+now+' 업데이트';})
-.catch(function(e){
+if(busy)return;
+busy=true;
+var xhr=new XMLHttpRequest();
+xhr.timeout=2000;
+xhr.open('GET','/data?t='+Date.now(),true);
+xhr.onreadystatechange=function(){
+if(xhr.readyState===4){
+busy=false;
+if(xhr.status===200){
+try{
+var d=JSON.parse(xhr.responseText);
+document.getElementById('rv').textContent=
+d.raw!==undefined?String(d.raw):'---';
+document.getElementById('gp').textContent=
+d.percent!==undefined?String(d.percent)+' %':'--.- %';
+if(d.status){
+var s=SC[d.status]||SC.safe;
+var sb=document.getElementById('sb');
+sb.className=s.c;sb.textContent=s.t;}
+if(d.percent!==undefined){
+da.push(Number(d.percent));
+if(da.length>MX)da.shift();
+draw();}
+ec=0;
+var now=new Date().toLocaleTimeString();
+var el=document.getElementById('cs');
+el.className='cs ok';
+el.textContent='✅ '+now+' 업데이트';
+}catch(e){
 ec++;
-document.getElementById('rv').textContent='오류';
+document.getElementById('rv').textContent='파싱오류';
+document.getElementById('gp').textContent='파싱오류';
+}}else{
+ec++;
+document.getElementById('rv').textContent='오류'+xhr.status;
 document.getElementById('gp').textContent='오류';
-var el=document.getElementById('cs');el.className='cs er';el.textContent='❌ 연결 오류 ('+ec+'번째)';});}
-window.addEventListener('load',function(){draw();fetchData();setInterval(fetchData,1000);});
+var el=document.getElementById('cs');
+el.className='cs er';
+el.textContent='❌ HTTP오류 ('+ec+'번째)';}
+}};
+xhr.ontimeout=function(){
+busy=false;ec++;
+document.getElementById('rv').textContent='타임아웃';
+document.getElementById('gp').textContent='타임아웃';
+var el=document.getElementById('cs');
+el.className='cs er';
+el.textContent='❌ 타임아웃 ('+ec+'번째)';};
+xhr.onerror=function(){
+busy=false;ec++;
+document.getElementById('rv').textContent='연결실패';
+document.getElementById('gp').textContent='연결실패';
+var el=document.getElementById('cs');
+el.className='cs er';
+el.textContent='❌ 연결실패 ('+ec+'번째)';};
+xhr.send();}
+
+window.addEventListener('load',function(){
+draw();
+fetchData();
+setInterval(fetchData,1000);});
 window.addEventListener('resize',draw);
 </script></body></html>"""
 
 # =============================================
-# HTTP 요청 처리
+# /data 응답
 # =============================================
 def send_data(conn):
-    """✅ /data → JSON 빠르게 응답"""
     raw     = gas_sensor.read_u16()
     percent = get_gas_percentage(raw)
     status  = get_status(raw)
@@ -219,13 +279,18 @@ def send_data(conn):
         "Content-Type: application/json\r\n"
         "Content-Length: " + str(len(body)) + "\r\n"
         "Access-Control-Allow-Origin: *\r\n"
-        "Connection: close\r\n\r\n"
+        "Access-Control-Allow-Methods: GET\r\n"
+        "Cache-Control: no-cache\r\n"
+        "Connection: close\r\n"
+        "\r\n"
         + body
     )
     conn.sendall(resp.encode())
 
+# =============================================
+# HTML 응답 (512바이트씩 나눠서 전송)
+# =============================================
 def send_html(conn):
-    """✅ HTML → 512바이트씩 나눠서 전송"""
     encoded = HTML.encode('utf-8')
     header  = (
         "HTTP/1.1 200 OK\r\n"
@@ -237,16 +302,22 @@ def send_html(conn):
     for i in range(0, len(encoded), 512):
         conn.sendall(encoded[i:i+512])
 
+# =============================================
+# 요청 처리
+# =============================================
 def handle_request(conn):
     try:
         request = conn.recv(1024).decode('utf-8', 'ignore')
         first   = request.split('\n')[0].strip()
         print(f"요청: {first}")
 
-        if 'GET /data' in request:
+        if '/data' in request:
             send_data(conn)
-        elif 'GET /favicon.ico' in request:
-            conn.sendall(b"HTTP/1.1 204 No Content\r\nConnection: close\r\n\r\n")
+        elif 'favicon' in request:
+            conn.sendall(
+                b"HTTP/1.1 204 No Content\r\n"
+                b"Connection: close\r\n\r\n"
+            )
         else:
             send_html(conn)
 
