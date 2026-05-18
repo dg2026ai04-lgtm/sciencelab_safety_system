@@ -10,36 +10,39 @@ from wifi_config import WIFI_SSID, WIFI_PASSWORD
 # =============================================
 gas_sensor = ADC(Pin(26))
 
-led_green  = Pin(13, Pin.OUT)
-led_yellow = Pin(12, Pin.OUT)
-led_red    = Pin(11, Pin.OUT)
+# ✅ LED 한 개 GP16
+led = Pin(16, Pin.OUT)
 
 sensor_data = []
 MAX_DATA    = 50
 
-def all_led_off():
-    led_green.value(0)
-    led_yellow.value(0)
-    led_red.value(0)
+# =============================================
+# LED 제어 (단계별 깜빡임)
+# =============================================
+def led_blink(times, on_time, off_time):
+    for _ in range(times):
+        led.value(1)
+        time.sleep(on_time)
+        led.value(0)
+        time.sleep(off_time)
 
 def update_led(raw):
     if raw < 30000:
-        all_led_off()
-        led_green.value(1)
+        # 안전 → 천천히 1번
+        led_blink(1, 0.5, 0.5)
     elif raw < 45000:
-        all_led_off()
-        led_yellow.value(1)
+        # 주의 → 2번
+        led_blink(2, 0.3, 0.2)
     elif raw < 57000:
-        all_led_off()
-        led_red.value(1)
+        # 위험 → 3번 빠르게
+        led_blink(3, 0.1, 0.1)
     else:
-        all_led_off()
-        for _ in range(3):
-            led_red.value(1)
-            time.sleep(0.05)
-            led_red.value(0)
-            time.sleep(0.05)
+        # 긴급 → 5번 매우 빠르게
+        led_blink(5, 0.05, 0.05)
 
+# =============================================
+# 센서값 변환
+# =============================================
 def get_gas_percentage(raw):
     return round((raw / 65535) * 100, 1)
 
@@ -238,7 +241,7 @@ window.addEventListener('resize',draw);
 </script></body></html>"""
 
 # =============================================
-# /data 응답 ✅ 핵심 수정: 한글 제거!
+# /data 응답
 # =============================================
 def send_data(conn):
     raw     = gas_sensor.read_u16()
@@ -252,8 +255,6 @@ def send_data(conn):
     if len(sensor_data) > MAX_DATA:
         sensor_data.pop(0)
 
-    # ✅ 한글 완전히 제거! 영어만 사용!
-    # ✅ 바이트 길이로 정확히 계산!
     body = ('{"raw":' + str(raw) +
             ',"percent":' + str(percent) +
             ',"status":"' + status + '"}')
