@@ -198,14 +198,14 @@ try{
 var txt=xhr.responseText.trim();
 var d=JSON.parse(txt);
 document.getElementById('rv').textContent=
-(d.raw!==undefined&&d.raw!==null)?String(d.raw):'---';
+(d.raw!==undefined)?String(d.raw):'---';
 document.getElementById('gp').textContent=
-(d.percent!==undefined&&d.percent!==null)?String(d.percent)+' %':'--.- %';
+(d.percent!==undefined)?String(d.percent)+' %':'--.- %';
 if(d.status){
 var s=SC[d.status]||SC.safe;
 var sb=document.getElementById('sb');
 sb.className=s.c;sb.textContent=s.t;}
-if(d.percent!==undefined&&d.percent!==null){
+if(d.percent!==undefined){
 da.push(Number(d.percent));
 if(da.length>MX)da.shift();
 draw();}
@@ -216,70 +216,61 @@ el.className='cs ok';
 el.textContent='✅ '+now+' 업데이트';
 }catch(e){
 ec++;
-console.log('파싱실패:',xhr.responseText);
 var el=document.getElementById('cs');
 el.className='cs er';
-el.textContent='❌ 파싱오류: '+xhr.responseText.substring(0,30);
-}}else{
+el.textContent='❌ 파싱오류';}
+}else{
 ec++;
 var el=document.getElementById('cs');
 el.className='cs er';
-el.textContent='❌ HTTP'+xhr.status+' ('+ec+'번째)';}
+el.textContent='❌ HTTP'+xhr.status;}
 }};
-xhr.ontimeout=function(){
-busy=false;ec++;
+xhr.ontimeout=function(){busy=false;ec++;
 var el=document.getElementById('cs');
-el.className='cs er';
-el.textContent='❌ 타임아웃('+ec+'번째)';};
-xhr.onerror=function(){
-busy=false;ec++;
+el.className='cs er';el.textContent='❌ 타임아웃';};
+xhr.onerror=function(){busy=false;ec++;
 var el=document.getElementById('cs');
-el.className='cs er';
-el.textContent='❌ 연결실패('+ec+'번째)';};
+el.className='cs er';el.textContent='❌ 연결실패';};
 xhr.send();}
 window.addEventListener('load',function(){
-draw();
-fetchData();
-setInterval(fetchData,1500);});
+draw();fetchData();setInterval(fetchData,1500);});
 window.addEventListener('resize',draw);
 </script></body></html>"""
 
 # =============================================
-# /data 응답 (✅ 핵심 수정!)
+# /data 응답 ✅ 핵심 수정: 한글 제거!
 # =============================================
 def send_data(conn):
     raw     = gas_sensor.read_u16()
     percent = get_gas_percentage(raw)
     status  = get_status(raw)
-    korean  = get_status_korean(raw)
 
     update_led(raw)
-    print(f"  raw={raw} | {percent}% | {korean}")
+    print(f"  raw={raw} | {percent}% | {get_status_korean(raw)}")
 
     sensor_data.append(percent)
     if len(sensor_data) > MAX_DATA:
         sensor_data.pop(0)
 
-    # ✅ 숫자를 문자열로 직접 조립 (json.dumps 오류 방지)
-    body = (
-        '{"raw":' + str(raw) +
-        ',"percent":' + str(percent) +
-        ',"status":"' + status + '"' +
-        ',"korean":"' + korean + '"}'
-    )
+    # ✅ 한글 완전히 제거! 영어만 사용!
+    # ✅ 바이트 길이로 정확히 계산!
+    body = ('{"raw":' + str(raw) +
+            ',"percent":' + str(percent) +
+            ',"status":"' + status + '"}')
+
+    body_bytes = body.encode('utf-8')
 
     header = (
         "HTTP/1.1 200 OK\r\n"
         "Content-Type: application/json\r\n"
-        "Content-Length: " + str(len(body)) + "\r\n"
+        "Content-Length: " + str(len(body_bytes)) + "\r\n"
         "Access-Control-Allow-Origin: *\r\n"
         "Cache-Control: no-cache\r\n"
         "Connection: close\r\n"
         "\r\n"
     )
-    # ✅ 헤더와 바디 따로 전송
-    conn.sendall(header.encode())
-    conn.sendall(body.encode())
+    conn.sendall(header.encode('utf-8'))
+    conn.sendall(body_bytes)
 
 # =============================================
 # HTML 응답
