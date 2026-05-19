@@ -27,36 +27,21 @@ def led_set_all(r,g,b):
     led.write()
 
 def update_led(percent):
-    # ✅ 임계값 기준으로 LED 색상 결정!
     if percent >= threshold["emergency"]:
-        # 🚨 긴급 → 빨강 빠르게 깜빡
         for _ in range(3):
-            led_set_all(150, 0, 0)
-            time.sleep(0.05)
-            led_off()
-            time.sleep(0.05)
+            led_set_all(150,0,0); time.sleep(0.05)
+            led_off(); time.sleep(0.05)
         return
-
-    elif percent >= threshold["danger"]:
-        # 🔴 위험 → 빨강 고정
-        count = min(int((percent/100)*NUM_LEDS)+1, NUM_LEDS)
-        for i in range(NUM_LEDS):
-            led[i] = (80,0,0) if i<count else (2,2,2)
-        led.write()
-
+    count = min(int((percent/100)*NUM_LEDS)+1, NUM_LEDS)
+    if percent >= threshold["danger"]:
+        color = (80,0,0)
     elif percent >= threshold["caution"]:
-        # 🟡 주의 → 노랑 고정
-        count = min(int((percent/100)*NUM_LEDS)+1, NUM_LEDS)
-        for i in range(NUM_LEDS):
-            led[i] = (80,80,0) if i<count else (2,2,2)
-        led.write()
-
+        color = (80,80,0)
     else:
-        # 🟢 안전 → 초록 고정
-        count = min(int((percent/100)*NUM_LEDS)+1, NUM_LEDS)
-        for i in range(NUM_LEDS):
-            led[i] = (0,80,0) if i<count else (2,2,2)
-        led.write()
+        color = (0,80,0)
+    for i in range(NUM_LEDS):
+        led[i] = color if i<count else (2,2,2)
+    led.write()
 
 def get_gas_percentage(raw):
     return round((raw/65535)*100, 1)
@@ -90,59 +75,88 @@ def connect_wifi():
     print(f"\n연결 성공! IP: {ip}")
     return ip
 
-# =============================================
-# HTML
-# =============================================
 HTML = b"""<!DOCTYPE html><html lang="ko"><head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>약품 실험실 안전 모니터링</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-body{font-family:sans-serif;background:#0f0f1a;color:white;padding:12px}
-h1{text-align:center;font-size:1.3em;margin-bottom:12px;color:#00d4ff}
-.sb{text-align:center;padding:14px;border-radius:10px;margin-bottom:12px;font-size:1.7em;font-weight:bold;border:2px solid transparent}
-.safe{background:#0d3b0d;border-color:#0f0;color:#0f0}
-.caution{background:#3b3b0d;border-color:#ff0;color:#ff0}
-.danger{background:#3b0d0d;border-color:#f44;color:#f44}
-.emergency{background:#5c0000;border-color:red;color:red;animation:bk .4s infinite}
-@keyframes bk{0%,100%{opacity:1}50%{opacity:.3}}
-.g2{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
-.g4{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;margin-bottom:10px}
-.card{background:#16213e;border-radius:8px;padding:10px;text-align:center;border:1px solid #2a2a5a}
-.lb{font-size:.75em;color:#888;margin-bottom:5px}
-.vl{font-size:1.6em;font-weight:bold;color:#00d4ff;min-height:35px;display:flex;align-items:center;justify-content:center}
-.mx{color:#f44}.mn{color:#0f0}.dc{color:#fa0}.tm{color:#aaf}
-.lg{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:5px;margin-bottom:10px}
-.li{border-radius:5px;padding:6px 3px;text-align:center;font-size:.7em;font-weight:bold}
-.ls{background:#0d3b0d;color:#0f0}.lc{background:#3b3b0d;color:#ff0}
-.ld{background:#3b0d0d;color:#f44}.le{background:#5c0000;color:#f66}
-.cb{background:#16213e;border-radius:10px;padding:15px;border:1px solid #2a2a5a;margin-bottom:10px}
-.ct{color:#aaa;font-size:.85em;margin-bottom:8px;font-weight:bold}
+body{font-family:'Segoe UI',sans-serif;background:#f0f4f8;color:#2d3748;padding:16px}
+h1{text-align:center;font-size:1.35em;margin-bottom:16px;color:#2b6cb0;font-weight:700;letter-spacing:-.5px}
+
+/* 상태 배너 */
+.sb{text-align:center;padding:16px;border-radius:14px;margin-bottom:14px;
+font-size:1.8em;font-weight:700;box-shadow:0 4px 15px rgba(0,0,0,.1)}
+.safe{background:linear-gradient(135deg,#38a169,#48bb78);color:white}
+.caution{background:linear-gradient(135deg,#d69e2e,#ecc94b);color:white}
+.danger{background:linear-gradient(135deg,#c53030,#e53e3e);color:white}
+.emergency{background:linear-gradient(135deg,#822727,#c53030);color:white;
+animation:bk .4s infinite}
+@keyframes bk{0%,100%{opacity:1}50%{opacity:.6}}
+
+/* 카드 */
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+.g4{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px;margin-bottom:12px}
+.card{background:white;border-radius:12px;padding:14px;text-align:center;
+box-shadow:0 2px 10px rgba(0,0,0,.07);border:1px solid #e2e8f0}
+.lb{font-size:.72em;color:#718096;margin-bottom:6px;font-weight:600;text-transform:uppercase;letter-spacing:.5px}
+.vl{font-size:1.7em;font-weight:700;color:#2b6cb0;min-height:36px;
+display:flex;align-items:center;justify-content:center}
+.mx{color:#e53e3e}.mn{color:#38a169}.dc{color:#d69e2e}.tm{color:#805ad5}
+
+/* 단계 표시 */
+.lg{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;margin-bottom:12px}
+.li{border-radius:10px;padding:8px 4px;text-align:center;font-size:.72em;
+font-weight:700;box-shadow:0 2px 8px rgba(0,0,0,.08)}
+.ls{background:linear-gradient(135deg,#c6f6d5,#9ae6b4);color:#276749}
+.lc{background:linear-gradient(135deg,#fefcbf,#faf089);color:#744210}
+.ld{background:linear-gradient(135deg,#fed7d7,#feb2b2);color:#822727}
+.le{background:linear-gradient(135deg,#822727,#c53030);color:white}
+
+/* LED 박스 */
+.led-box{background:white;border-radius:12px;padding:14px;
+box-shadow:0 2px 10px rgba(0,0,0,.07);border:1px solid #e2e8f0;
+margin-bottom:12px;text-align:center}
+.led-box h3{color:#2b6cb0;font-size:.85em;margin-bottom:10px;font-weight:700}
+.led-row{display:flex;justify-content:center;gap:10px}
+.led-dot{width:30px;height:30px;border-radius:50%;background:#e2e8f0;
+border:2px solid #cbd5e0;transition:all .3s}
+
+/* 그래프 */
+.cb{background:white;border-radius:14px;padding:18px;
+box-shadow:0 2px 10px rgba(0,0,0,.07);border:1px solid #e2e8f0;margin-bottom:12px}
+.ct{color:#4a5568;font-size:.85em;margin-bottom:10px;font-weight:700}
 canvas{display:block;width:100%}
-.tb{background:#16213e;border-radius:8px;padding:12px;border:1px solid #2a2a5a;margin-bottom:10px}
-.tb h3{color:#00d4ff;font-size:.88em;margin-bottom:3px}
-.tb p{color:#666;font-size:.72em;margin-bottom:10px}
-.tr{display:flex;align-items:center;gap:8px;margin-bottom:10px}
-.tr label{color:#aaa;font-size:.8em;width:50px;flex-shrink:0}
-.tr input{flex:1;accent-color:#00d4ff;cursor:pointer}
-.tr span{font-size:.88em;width:40px;text-align:right;font-weight:bold}
-.c1{color:#ff0}.c2{color:#f44}.c3{color:red}
-.br{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:6px}
-.bt{padding:10px;background:#1a3a5c;border:1px solid #00d4ff;border-radius:7px;color:#00d4ff;font-size:.88em;cursor:pointer}
-.bt:hover{background:#0d4a7a}
-.bd{padding:10px;background:#2a1a0d;border:1px solid #fa0;border-radius:7px;color:#fa0;font-size:.88em;cursor:pointer}
-.bd:hover{background:#3a2a0d}
-.rb{width:100%;padding:8px;background:#3b0d0d;border:1px solid #f44;border-radius:7px;color:#f44;font-size:.82em;cursor:pointer;margin-bottom:10px}
-.rb:hover{background:#5c1010}
-.cs{text-align:center;font-size:.73em;padding:4px}
-.ok{color:#0f0}.er{color:#f44}
-.pt{color:#fa0;font-size:.72em;text-align:center;margin-top:5px;display:none}
-.pn{border-color:#fa0!important}
-.led-box{background:#16213e;border-radius:8px;padding:12px;border:1px solid #2a2a5a;margin-bottom:10px;text-align:center}
-.led-box h3{color:#00d4ff;font-size:.88em;margin-bottom:10px}
-.led-row{display:flex;justify-content:center;gap:8px}
-.led-dot{width:28px;height:28px;border-radius:50%;background:#1a1a2e;border:2px solid #2a2a5a;transition:all .3s}
+
+/* 임계값 설정 */
+.tb{background:white;border-radius:12px;padding:14px;
+box-shadow:0 2px 10px rgba(0,0,0,.07);border:1px solid #e2e8f0;margin-bottom:12px}
+.tb h3{color:#2b6cb0;font-size:.88em;margin-bottom:3px;font-weight:700}
+.tb p{color:#a0aec0;font-size:.72em;margin-bottom:12px}
+.tr{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.tr label{color:#4a5568;font-size:.8em;width:55px;flex-shrink:0;font-weight:600}
+.tr input[type=range]{flex:1;accent-color:#4299e1;cursor:pointer;height:5px}
+.tr span{font-size:.9em;width:42px;text-align:right;font-weight:700}
+.c1{color:#d69e2e}.c2{color:#e53e3e}.c3{color:#822727}
+.br{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
+.bt{padding:10px;background:linear-gradient(135deg,#3182ce,#4299e1);
+border:none;border-radius:8px;color:white;font-size:.88em;cursor:pointer;font-weight:600}
+.bt:hover{background:linear-gradient(135deg,#2c5282,#3182ce)}
+.bd{padding:10px;background:linear-gradient(135deg,#dd6b20,#ed8936);
+border:none;border-radius:8px;color:white;font-size:.88em;cursor:pointer;font-weight:600}
+.bd:hover{background:linear-gradient(135deg,#c05621,#dd6b20)}
+.rb{width:100%;padding:9px;
+background:linear-gradient(135deg,#e53e3e,#fc8181);
+border:none;border-radius:8px;color:white;
+font-size:.83em;cursor:pointer;margin-bottom:12px;font-weight:600}
+.rb:hover{background:linear-gradient(135deg,#c53030,#e53e3e)}
+.cs{text-align:center;font-size:.73em;padding:5px;border-radius:8px}
+.ok{color:#38a169;background:#f0fff4;border:1px solid #c6f6d5}
+.er{color:#e53e3e;background:#fff5f5;border:1px solid #fed7d7}
+.pt{color:#d69e2e;font-size:.72em;text-align:center;margin-top:6px;
+background:#fffff0;border-radius:6px;padding:4px;display:none;
+border:1px solid #faf089}
+.pn{border-color:#d69e2e!important;border-width:2px!important}
 </style></head><body>
 <h1>💊🧪 약품 실험실 안전 모니터링</h1>
 <div class="sb safe" id="sb">🟢 안전</div>
@@ -164,11 +178,12 @@ canvas{display:block;width:100%}
 </div>
 <div class="led-box">
 <h3>💡 네오픽셀 LED 현재 상태</h3>
-<div class="led-row" id="ledrow">
+<div class="led-row" id="ledrow"></div>
 </div>
+<div class="cb">
+<div class="ct">📈 실시간 가스 농도 그래프</div>
+<canvas id="cv" height="340"></canvas>
 </div>
-<div class="cb"><div class="ct">📈 실시간 가스 농도 그래프</div>
-<canvas id="cv" height="360"></canvas></div>
 <div class="tb" id="tb">
 <h3>⚙️ 위험 임계값 설정</h3>
 <p>슬라이더 조절 후 ✅ 적용 버튼을 눌러주세요</p>
@@ -191,9 +206,6 @@ canvas{display:block;width:100%}
 <script src="/js"></script>
 </body></html>"""
 
-# =============================================
-# JS
-# =============================================
 JS = b"""
 var cv=document.getElementById('cv');
 var cx=cv.getContext('2d');
@@ -201,30 +213,28 @@ var da=[],ta=[],MX=60;
 var th={caution:46,danger:69,emergency:87};
 var sliding=false,stimer=null;
 
-// ✅ LED 점 10개 생성
 var ledrow=document.getElementById('ledrow');
 for(var i=0;i<10;i++){
 var d=document.createElement('div');
 d.className='led-dot';d.id='ld'+i;
 ledrow.appendChild(d);}
 
-// ✅ 웹 LED 표시 업데이트
 function updateLedUI(percent,status){
-var color,glow;
-if(status==='emergency'){color='#ff0000';glow='0 0 12px #ff0000';}
-else if(status==='danger'){color='#ff3300';glow='0 0 10px #ff3300';}
-else if(status==='caution'){color='#ffff00';glow='0 0 10px #ffff00';}
-else{color='#00ff00';glow='0 0 10px #00ff00';}
+var color,glow,border;
+if(status==='emergency'){color='#fc5c5c';glow='0 0 14px #e53e3e';border='#e53e3e';}
+else if(status==='danger'){color='#fc8181';glow='0 0 12px #e53e3e';border='#e53e3e';}
+else if(status==='caution'){color='#f6e05e';glow='0 0 12px #d69e2e';border='#d69e2e';}
+else{color='#68d391';glow='0 0 12px #38a169';border='#38a169';}
 var count=Math.min(Math.floor((percent/100)*10)+1,10);
 for(var i=0;i<10;i++){
 var dot=document.getElementById('ld'+i);
 if(i<count){
 dot.style.background=color;
-dot.style.borderColor=color;
+dot.style.borderColor=border;
 dot.style.boxShadow=glow;}
 else{
-dot.style.background='#1a1a2e';
-dot.style.borderColor='#2a2a5a';
+dot.style.background='#e2e8f0';
+dot.style.borderColor='#cbd5e0';
 dot.style.boxShadow='none';}}}
 
 function loadSaved(){
@@ -253,29 +263,39 @@ if(stimer)clearTimeout(stimer);
 stimer=setTimeout(function(){sliding=false;},8000);}
 
 function draw(){
-var W=cv.offsetWidth||800,H=360;
+var W=cv.offsetWidth||800,H=340;
 cv.width=W;cv.height=H;
 var PL=46,PR=12,PT=18,PB=42,GW=W-PL-PR,GH=H-PT-PB;
-cx.fillStyle='#0d1526';cx.fillRect(0,0,W,H);
+
+// 밝은 배경
+cx.fillStyle='#f7fafc';cx.fillRect(0,0,W,H);
+
+// 그리드
 [0,10,20,30,40,50,60,70,80,90,100].forEach(function(p){
 var y=PT+GH-(p/100)*GH;
-cx.strokeStyle=p%25===0?'#1e2a4a':'#131d33';cx.lineWidth=1;
+cx.strokeStyle=p%25===0?'#cbd5e0':'#edf2f7';
+cx.lineWidth=p%25===0?1.2:0.8;
 cx.beginPath();cx.moveTo(PL,y);cx.lineTo(PL+GW,y);cx.stroke();
-cx.fillStyle=p%25===0?'#666':'#333';
+cx.fillStyle=p%25===0?'#4a5568':'#a0aec0';
 cx.font=p%25===0?'bold 11px sans-serif':'9px sans-serif';
-cx.textAlign='right';cx.fillText(p+'%',PL-4,y+4);});
-[{p:th.caution,c:'rgba(255,220,0,.7)',t:'주의'+th.caution+'%'},
-{p:th.danger,c:'rgba(255,80,80,.7)',t:'위험'+th.danger+'%'},
-{p:th.emergency,c:'rgba(255,0,0,1)',t:'긴급'+th.emergency+'%'}
+cx.textAlign='right';cx.fillText(p+'%',PL-5,y+4);});
+
+// 임계선
+[{p:th.caution,c:'rgba(214,158,46,.8)',t:'주의'+th.caution+'%'},
+{p:th.danger,c:'rgba(229,62,62,.8)',t:'위험'+th.danger+'%'},
+{p:th.emergency,c:'rgba(130,39,39,1)',t:'긴급'+th.emergency+'%'}
 ].forEach(function(ln){
 var y=PT+GH-(ln.p/100)*GH;
 cx.strokeStyle=ln.c;cx.lineWidth=1.8;cx.setLineDash([7,5]);
 cx.beginPath();cx.moveTo(PL,y);cx.lineTo(PL+GW,y);cx.stroke();
 cx.setLineDash([]);cx.fillStyle=ln.c;cx.font='bold 10px sans-serif';
 cx.textAlign='left';cx.fillText(ln.t,PL+5,y-4);});
+
 if(da.length<2){
-cx.fillStyle='#444';cx.font='15px sans-serif';cx.textAlign='center';
+cx.fillStyle='#a0aec0';cx.font='15px sans-serif';cx.textAlign='center';
 cx.fillText('데이터 수집 중...',W/2,H/2);return;}
+
+// 면적
 cx.beginPath();
 da.forEach(function(v,i){
 var x=PL+(i/(MX-1))*GW,y=PT+GH-(v/100)*GH;
@@ -283,31 +303,37 @@ i===0?cx.moveTo(x,y):cx.lineTo(x,y);});
 var lx=PL+((da.length-1)/(MX-1))*GW;
 cx.lineTo(lx,PT+GH);cx.lineTo(PL,PT+GH);cx.closePath();
 var g=cx.createLinearGradient(0,PT,0,PT+GH);
-g.addColorStop(0,'rgba(0,212,255,.22)');
-g.addColorStop(1,'rgba(0,212,255,.01)');
+g.addColorStop(0,'rgba(66,153,225,.3)');
+g.addColorStop(1,'rgba(66,153,225,.02)');
 cx.fillStyle=g;cx.fill();
-cx.beginPath();cx.strokeStyle='#00d4ff';cx.lineWidth=2.8;
+
+// 실선
+cx.beginPath();cx.strokeStyle='#3182ce';cx.lineWidth=2.8;
 cx.lineJoin='round';cx.lineCap='round';
 da.forEach(function(v,i){
 var x=PL+(i/(MX-1))*GW,y=PT+GH-(v/100)*GH;
 i===0?cx.moveTo(x,y):cx.lineTo(x,y);});
 cx.stroke();
+
+// 최신 점
 var lv=da[da.length-1];
 var lxp=PL+((da.length-1)/(MX-1))*GW;
 var lyp=PT+GH-(lv/100)*GH;
 cx.beginPath();cx.arc(lxp,lyp,6,0,Math.PI*2);
-cx.fillStyle='#00d4ff';cx.fill();
-cx.strokeStyle='#0f0f1a';cx.lineWidth=2;cx.stroke();
-cx.fillStyle='white';cx.font='bold 12px sans-serif';
-cx.textAlign='center';cx.fillText(lv+'%',lxp,lyp-11);
+cx.fillStyle='#3182ce';cx.fill();
+cx.strokeStyle='white';cx.lineWidth=2;cx.stroke();
+cx.fillStyle='#2d3748';cx.font='bold 12px sans-serif';
+cx.textAlign='center';cx.fillText(lv+'%',lxp,lyp-12);
+
+// 시간축
 var step=Math.max(1,Math.floor(da.length/6));
 for(var i=0;i<da.length;i+=step){
 var x=PL+(i/(MX-1))*GW;
-cx.strokeStyle='#333';cx.lineWidth=1;
+cx.strokeStyle='#e2e8f0';cx.lineWidth=1;
 cx.beginPath();cx.moveTo(x,PT+GH);cx.lineTo(x,PT+GH+4);cx.stroke();
-cx.fillStyle='#555';cx.font='9px sans-serif';cx.textAlign='center';
+cx.fillStyle='#718096';cx.font='9px sans-serif';cx.textAlign='center';
 cx.fillText(ta[i]||'',x,PT+GH+16);}
-cx.strokeStyle='#2a2a5a';cx.lineWidth=1;
+cx.strokeStyle='#cbd5e0';cx.lineWidth=1.5;
 cx.beginPath();cx.moveTo(PL,PT+GH);cx.lineTo(PL+GW,PT+GH);cx.stroke();}
 
 var SC={
@@ -338,7 +364,6 @@ if(d.status){
 var s=SC[d.status]||SC.safe;
 var sb=document.getElementById('sb');
 sb.className=s.c;sb.textContent=s.t;
-// ✅ 웹 LED도 같이 업데이트!
 updateLedUI(d.percent,d.status);}
 if(d.percent!==undefined){
 var n=new Date();
@@ -348,22 +373,24 @@ if(da.length>MX){da.shift();ta.shift();}
 draw();}
 if(d.threshold&&!sliding){th=d.threshold;}
 ec=0;
-document.getElementById('cs').className='cs ok';
-document.getElementById('cs').textContent='✅ '+new Date().toLocaleTimeString()+' 업데이트';
+var el=document.getElementById('cs');
+el.className='cs ok';
+el.textContent='✅ '+new Date().toLocaleTimeString()+' 업데이트';
 }catch(e){
 ec++;
-document.getElementById('cs').className='cs er';
-document.getElementById('cs').textContent='❌ 파싱오류';}}
-else{
-ec++;
-document.getElementById('cs').className='cs er';
-document.getElementById('cs').textContent='❌ HTTP'+xhr.status;}};
+var el=document.getElementById('cs');
+el.className='cs er';
+el.textContent='❌ 파싱오류';}}
+else{ec++;
+var el=document.getElementById('cs');
+el.className='cs er';
+el.textContent='❌ HTTP'+xhr.status;}};
 xhr.ontimeout=function(){busy=false;ec++;
-document.getElementById('cs').className='cs er';
-document.getElementById('cs').textContent='❌ 타임아웃';};
+var el=document.getElementById('cs');
+el.className='cs er';el.textContent='❌ 타임아웃';};
 xhr.onerror=function(){busy=false;ec++;
-document.getElementById('cs').className='cs er';
-document.getElementById('cs').textContent='❌ 연결실패';};
+var el=document.getElementById('cs');
+el.className='cs er';el.textContent='❌ 연결실패';};
 xhr.send();}
 
 function setTh(){
@@ -387,8 +414,8 @@ xhr.send(JSON.stringify({caution:c,danger:d,emergency:e}));}
 
 function loadDef(){
 if(!confirm('기본값으로 복원할까요?\\n주의:46%  위험:69%  긴급:87%'))return;
-var def={caution:46,danger:69,emergency:87};
-setSUI(def);sliding=true;
+setSUI({caution:46,danger:69,emergency:87});
+sliding=true;
 document.getElementById('pt').style.display='block';
 document.getElementById('tb').classList.add('pn');}
 
