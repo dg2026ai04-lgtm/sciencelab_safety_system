@@ -6,13 +6,10 @@ import neopixel
 from machine import Pin, ADC
 from wifi_config import WIFI_SSID, WIFI_PASSWORD
 
-# =============================================
-# 하드웨어 설정
-# =============================================
 gas_sensor = ADC(Pin(26))
-TIMING   = (280, 515, 515, 745)
-NUM_LEDS = 10
-led      = neopixel.NeoPixel(Pin(16), NUM_LEDS, timing=TIMING)
+TIMING     = (280, 515, 515, 745)
+NUM_LEDS   = 10
+led        = neopixel.NeoPixel(Pin(16), NUM_LEDS, timing=TIMING)
 
 sensor_data  = []
 max_percent  = 0.0
@@ -30,55 +27,75 @@ def led_set_all(r,g,b):
     led.write()
 
 def update_led(percent):
-    if percent>=threshold["emergency"]:
+    # ✅ 임계값 기준으로 LED 색상 결정!
+    if percent >= threshold["emergency"]:
+        # 🚨 긴급 → 빨강 빠르게 깜빡
         for _ in range(3):
-            led_set_all(150,0,0); time.sleep(0.05)
-            led_off(); time.sleep(0.05)
+            led_set_all(150, 0, 0)
+            time.sleep(0.05)
+            led_off()
+            time.sleep(0.05)
         return
-    count=min(int((percent/100)*NUM_LEDS)+1,NUM_LEDS)
-    if percent<50:
-        r=int(255*(percent/50)*0.3); g=int(255*0.3); b=0
+
+    elif percent >= threshold["danger"]:
+        # 🔴 위험 → 빨강 고정
+        count = min(int((percent/100)*NUM_LEDS)+1, NUM_LEDS)
+        for i in range(NUM_LEDS):
+            led[i] = (80,0,0) if i<count else (2,2,2)
+        led.write()
+
+    elif percent >= threshold["caution"]:
+        # 🟡 주의 → 노랑 고정
+        count = min(int((percent/100)*NUM_LEDS)+1, NUM_LEDS)
+        for i in range(NUM_LEDS):
+            led[i] = (80,80,0) if i<count else (2,2,2)
+        led.write()
+
     else:
-        r=int(255*0.3); g=int(255*(1-(percent-50)/50)*0.3); b=0
-    for i in range(NUM_LEDS):
-        led[i]=(r,g,b) if i<count else (2,2,2)
-    led.write()
+        # 🟢 안전 → 초록 고정
+        count = min(int((percent/100)*NUM_LEDS)+1, NUM_LEDS)
+        for i in range(NUM_LEDS):
+            led[i] = (0,80,0) if i<count else (2,2,2)
+        led.write()
 
 def get_gas_percentage(raw):
-    return round((raw/65535)*100,1)
+    return round((raw/65535)*100, 1)
 
 def get_status(p):
-    if p<threshold["caution"]: return "safe"
-    elif p<threshold["danger"]: return "caution"
-    elif p<threshold["emergency"]: return "danger"
-    else: return "emergency"
+    if p < threshold["caution"]:     return "safe"
+    elif p < threshold["danger"]:    return "caution"
+    elif p < threshold["emergency"]: return "danger"
+    else:                            return "emergency"
 
 def get_status_korean(p):
-    if p<threshold["caution"]: return "안전"
-    elif p<threshold["danger"]: return "주의"
-    elif p<threshold["emergency"]: return "위험"
-    else: return "긴급"
+    if p < threshold["caution"]:     return "안전"
+    elif p < threshold["danger"]:    return "주의"
+    elif p < threshold["emergency"]: return "위험"
+    else:                            return "긴급"
 
 def get_elapsed():
-    e=int(time.time()-start_time)
+    e = int(time.time()-start_time)
     return str(e//60)+":"+"{:02d}".format(e%60)
 
 def connect_wifi():
-    wlan=network.WLAN(network.STA_IF)
+    wlan = network.WLAN(network.STA_IF)
     wlan.active(True)
-    wlan.connect(WIFI_SSID,WIFI_PASSWORD)
-    print("Wi-Fi 연결 중",end="")
-    t=0
+    wlan.connect(WIFI_SSID, WIFI_PASSWORD)
+    print("Wi-Fi 연결 중", end="")
+    t = 0
     while not wlan.isconnected():
-        print(".",end=""); time.sleep(0.5); t+=1
+        print(".", end=""); time.sleep(0.5); t+=1
         if t>20: print("\n실패!"); return None
-    ip=wlan.ifconfig()[0]
+    ip = wlan.ifconfig()[0]
     print(f"\n연결 성공! IP: {ip}")
     return ip
 
-# HTML을 두 파트로 나눠서 메모리 절약!
-HTML_A = b"""<!DOCTYPE html><html lang="ko"><head>
-<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+# =============================================
+# HTML
+# =============================================
+HTML = b"""<!DOCTYPE html><html lang="ko"><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>약품 실험실 안전 모니터링</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
@@ -122,6 +139,10 @@ canvas{display:block;width:100%}
 .ok{color:#0f0}.er{color:#f44}
 .pt{color:#fa0;font-size:.72em;text-align:center;margin-top:5px;display:none}
 .pn{border-color:#fa0!important}
+.led-box{background:#16213e;border-radius:8px;padding:12px;border:1px solid #2a2a5a;margin-bottom:10px;text-align:center}
+.led-box h3{color:#00d4ff;font-size:.88em;margin-bottom:10px}
+.led-row{display:flex;justify-content:center;gap:8px}
+.led-dot{width:28px;height:28px;border-radius:50%;background:#1a1a2e;border:2px solid #2a2a5a;transition:all .3s}
 </style></head><body>
 <h1>💊🧪 약품 실험실 안전 모니터링</h1>
 <div class="sb safe" id="sb">🟢 안전</div>
@@ -140,6 +161,11 @@ canvas{display:block;width:100%}
 <div class="li lc">🟡 주의<br><span id="r2">46~69%</span></div>
 <div class="li ld">🔴 위험<br><span id="r3">69~87%</span></div>
 <div class="li le">🚨 긴급<br><span id="r4">87%~</span></div>
+</div>
+<div class="led-box">
+<h3>💡 네오픽셀 LED 현재 상태</h3>
+<div class="led-row" id="ledrow">
+</div>
 </div>
 <div class="cb"><div class="ct">📈 실시간 가스 농도 그래프</div>
 <canvas id="cv" height="360"></canvas></div>
@@ -161,14 +187,45 @@ canvas{display:block;width:100%}
 <button class="bd" onclick="loadDef()">↩️ 기본값 복원</button>
 </div></div>
 <button class="rb" onclick="resetData()">🔄 측정 데이터 초기화</button>
-<div class="cs" id="cs">연결 중...</div>"""
+<div class="cs" id="cs">연결 중...</div>
+<script src="/js"></script>
+</body></html>"""
 
-HTML_B = b"""<script>
+# =============================================
+# JS
+# =============================================
+JS = b"""
 var cv=document.getElementById('cv');
 var cx=cv.getContext('2d');
 var da=[],ta=[],MX=60;
 var th={caution:46,danger:69,emergency:87};
 var sliding=false,stimer=null;
+
+// ✅ LED 점 10개 생성
+var ledrow=document.getElementById('ledrow');
+for(var i=0;i<10;i++){
+var d=document.createElement('div');
+d.className='led-dot';d.id='ld'+i;
+ledrow.appendChild(d);}
+
+// ✅ 웹 LED 표시 업데이트
+function updateLedUI(percent,status){
+var color,glow;
+if(status==='emergency'){color='#ff0000';glow='0 0 12px #ff0000';}
+else if(status==='danger'){color='#ff3300';glow='0 0 10px #ff3300';}
+else if(status==='caution'){color='#ffff00';glow='0 0 10px #ffff00';}
+else{color='#00ff00';glow='0 0 10px #00ff00';}
+var count=Math.min(Math.floor((percent/100)*10)+1,10);
+for(var i=0;i<10;i++){
+var dot=document.getElementById('ld'+i);
+if(i<count){
+dot.style.background=color;
+dot.style.borderColor=color;
+dot.style.boxShadow=glow;}
+else{
+dot.style.background='#1a1a2e';
+dot.style.borderColor='#2a2a5a';
+dot.style.boxShadow='none';}}}
 
 function loadSaved(){
 var s=localStorage.getItem('th');
@@ -226,7 +283,8 @@ i===0?cx.moveTo(x,y):cx.lineTo(x,y);});
 var lx=PL+((da.length-1)/(MX-1))*GW;
 cx.lineTo(lx,PT+GH);cx.lineTo(PL,PT+GH);cx.closePath();
 var g=cx.createLinearGradient(0,PT,0,PT+GH);
-g.addColorStop(0,'rgba(0,212,255,.22)');g.addColorStop(1,'rgba(0,212,255,.01)');
+g.addColorStop(0,'rgba(0,212,255,.22)');
+g.addColorStop(1,'rgba(0,212,255,.01)');
 cx.fillStyle=g;cx.fill();
 cx.beginPath();cx.strokeStyle='#00d4ff';cx.lineWidth=2.8;
 cx.lineJoin='round';cx.lineCap='round';
@@ -252,8 +310,11 @@ cx.fillText(ta[i]||'',x,PT+GH+16);}
 cx.strokeStyle='#2a2a5a';cx.lineWidth=1;
 cx.beginPath();cx.moveTo(PL,PT+GH);cx.lineTo(PL+GW,PT+GH);cx.stroke();}
 
-var SC={safe:{c:'sb safe',t:'🟢 안전'},caution:{c:'sb caution',t:'🟡 주의'},
-danger:{c:'sb danger',t:'🔴 위험'},emergency:{c:'sb emergency',t:'🚨 긴급 대피!'}};
+var SC={
+safe:{c:'sb safe',t:'🟢 안전'},
+caution:{c:'sb caution',t:'🟡 주의'},
+danger:{c:'sb danger',t:'🔴 위험'},
+emergency:{c:'sb emergency',t:'🚨 긴급 대피!'}};
 var ec=0,busy=false;
 
 function fetchData(){
@@ -273,7 +334,12 @@ document.getElementById('mx').textContent=d.max_p!==undefined?String(d.max_p)+'%
 document.getElementById('mn').textContent=d.min_p!==undefined?String(d.min_p)+'%':'--';
 document.getElementById('dc').textContent=d.danger_cnt!==undefined?String(d.danger_cnt)+'회':'0회';
 document.getElementById('et').textContent=d.elapsed||'0:00';
-if(d.status){var s=SC[d.status]||SC.safe;var sb=document.getElementById('sb');sb.className=s.c;sb.textContent=s.t;}
+if(d.status){
+var s=SC[d.status]||SC.safe;
+var sb=document.getElementById('sb');
+sb.className=s.c;sb.textContent=s.t;
+// ✅ 웹 LED도 같이 업데이트!
+updateLedUI(d.percent,d.status);}
 if(d.percent!==undefined){
 var n=new Date();
 var ts=n.getHours()+':'+String(n.getMinutes()).padStart(2,'0')+':'+String(n.getSeconds()).padStart(2,'0');
@@ -282,13 +348,14 @@ if(da.length>MX){da.shift();ta.shift();}
 draw();}
 if(d.threshold&&!sliding){th=d.threshold;}
 ec=0;
-var el=document.getElementById('cs');
-el.className='cs ok';
-el.textContent='✅ '+new Date().toLocaleTimeString()+' 업데이트';
-}catch(e){ec++;
+document.getElementById('cs').className='cs ok';
+document.getElementById('cs').textContent='✅ '+new Date().toLocaleTimeString()+' 업데이트';
+}catch(e){
+ec++;
 document.getElementById('cs').className='cs er';
 document.getElementById('cs').textContent='❌ 파싱오류';}}
-else{ec++;
+else{
+ec++;
 document.getElementById('cs').className='cs er';
 document.getElementById('cs').textContent='❌ HTTP'+xhr.status;}};
 xhr.ontimeout=function(){busy=false;ec++;
@@ -315,11 +382,11 @@ sliding=false;
 document.getElementById('pt').style.display='none';
 document.getElementById('tb').classList.remove('pn');
 setRL(th);draw();
-alert('✅ 임계값 저장 완료!\n주의: '+c+'%  위험: '+d+'%  긴급: '+e+'%\n새로고침해도 유지됩니다!');}};
+alert('✅ 임계값 저장 완료!\\n주의:'+c+'%  위험:'+d+'%  긴급:'+e+'%\\n새로고침해도 유지됩니다!');}};
 xhr.send(JSON.stringify({caution:c,danger:d,emergency:e}));}
 
 function loadDef(){
-if(!confirm('기본값으로 복원할까요?\n주의:46%  위험:69%  긴급:87%'))return;
+if(!confirm('기본값으로 복원할까요?\\n주의:46%  위험:69%  긴급:87%'))return;
 var def={caution:46,danger:69,emergency:87};
 setSUI(def);sliding=true;
 document.getElementById('pt').style.display='block';
@@ -339,15 +406,16 @@ document.getElementById('et').textContent='0:00';
 draw();alert('✅ 초기화 완료!');}};
 xhr.send();}
 
-window.addEventListener('load',function(){loadSaved();draw();fetchData();setInterval(fetchData,1500);});
+window.addEventListener('load',function(){
+loadSaved();draw();fetchData();setInterval(fetchData,1500);});
 window.addEventListener('resize',draw);
-</script></body></html>"""
+"""
 
 def send_data(conn):
     global max_percent,min_percent,danger_count
-    raw=gas_sensor.read_u16()
-    percent=get_gas_percentage(raw)
-    status=get_status(percent)
+    raw     = gas_sensor.read_u16()
+    percent = get_gas_percentage(raw)
+    status  = get_status(percent)
     if percent>max_percent: max_percent=percent
     if percent<min_percent: min_percent=percent
     if status in("danger","emergency"): danger_count+=1
@@ -378,13 +446,23 @@ def send_data(conn):
     conn.sendall(header.encode('utf-8'))
     conn.sendall(body_bytes)
 
+def send_js(conn):
+    header=(
+        "HTTP/1.1 200 OK\r\n"
+        "Content-Type: application/javascript\r\n"
+        "Content-Length: "+str(len(JS))+"\r\n"
+        "Connection: close\r\n\r\n").encode()
+    conn.sendall(header)
+    for i in range(0,len(JS),256):
+        conn.sendall(JS[i:i+256])
+
 def handle_threshold(conn,request):
     global threshold
     try:
         body=request.split('\r\n\r\n')[-1]
         data=json.loads(body)
-        threshold["caution"]=int(data["caution"])
-        threshold["danger"]=int(data["danger"])
+        threshold["caution"]  =int(data["caution"])
+        threshold["danger"]   =int(data["danger"])
         threshold["emergency"]=int(data["emergency"])
         print(f"임계값 변경: {threshold}")
         conn.sendall(b"HTTP/1.1 200 OK\r\nContent-Length: 2\r\n\r\nOK")
@@ -400,16 +478,14 @@ def handle_reset(conn):
     conn.sendall(b"HTTP/1.1 200 OK\r\nContent-Length: 2\r\n\r\nOK")
 
 def send_html(conn):
-    total=HTML_A+HTML_B
     header=(
         "HTTP/1.1 200 OK\r\n"
         "Content-Type: text/html; charset=utf-8\r\n"
-        "Content-Length: "+str(len(total))+"\r\n"
+        "Content-Length: "+str(len(HTML))+"\r\n"
         "Connection: close\r\n\r\n").encode()
     conn.sendall(header)
-    # ✅ 256바이트씩 나눠서 전송
-    for i in range(0,len(total),256):
-        conn.sendall(total[i:i+256])
+    for i in range(0,len(HTML),256):
+        conn.sendall(HTML[i:i+256])
 
 def handle_request(conn):
     try:
@@ -418,6 +494,7 @@ def handle_request(conn):
         print(f"요청: {first}")
         if 'POST /threshold' in request: handle_threshold(conn,request)
         elif 'POST /reset' in request: handle_reset(conn)
+        elif 'GET /js' in request: send_js(conn)
         elif '/data' in request: send_data(conn)
         elif 'favicon' in request:
             conn.sendall(b"HTTP/1.1 204 No Content\r\nConnection: close\r\n\r\n")
