@@ -26,6 +26,62 @@ def led_set_all(r,g,b):
     for i in range(NUM_LEDS): led[i]=(r,g,b)
     led.write()
 
+# =============================================
+# ✅ 시작 애니메이션
+# =============================================
+def startup_animation():
+    # 1단계: 흰색으로 전체 켜기
+    led_set_all(80, 80, 80)
+    time.sleep(0.8)
+
+    # 2단계: 무지개 파도타기 (짧게 2번!)
+    rainbow = [
+        (80, 0,  0 ),   # 빨강
+        (80, 30, 0 ),   # 주황
+        (80, 80, 0 ),   # 노랑
+        (0,  80, 0 ),   # 초록
+        (0,  50, 80),   # 하늘
+        (0,  0,  80),   # 파랑
+        (40, 0,  80),   # 남색
+        (60, 0,  60),   # 보라
+        (80, 0,  40),   # 핑크
+        (80, 20, 0 ),   # 주황2
+    ]
+
+    for _ in range(2):  # 2번 반복
+        # 1번→10번 순서로 파도
+        for i in range(NUM_LEDS):
+            led_off()
+            # 현재 LED + 이전 LED 꼬리
+            led[i] = rainbow[i]
+            if i > 0:
+                r,g,b = rainbow[i-1]
+                led[i-1] = (r//4, g//4, b//4)
+            if i > 1:
+                r,g,b = rainbow[i-2]
+                led[i-2] = (r//8, g//8, b//8)
+            led.write()
+            time.sleep(0.06)
+
+        # 10번→1번 역방향
+        for i in range(NUM_LEDS-1, -1, -1):
+            led_off()
+            led[i] = rainbow[i]
+            if i < NUM_LEDS-1:
+                r,g,b = rainbow[i+1]
+                led[i+1] = (r//4, g//4, b//4)
+            if i < NUM_LEDS-2:
+                r,g,b = rainbow[i+2]
+                led[i+2] = (r//8, g//8, b//8)
+            led.write()
+            time.sleep(0.06)
+
+    # 3단계: 전체 한번 밝게 켰다가 꺼지기
+    led_set_all(60, 60, 60)
+    time.sleep(0.2)
+    led_off()
+    time.sleep(0.1)
+
 def update_led(percent):
     if percent >= threshold["emergency"]:
         for _ in range(3):
@@ -83,8 +139,6 @@ HTML = b"""<!DOCTYPE html><html lang="ko"><head>
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:'Segoe UI',sans-serif;background:#f0f4f8;color:#2d3748;padding:16px}
 h1{text-align:center;font-size:1.35em;margin-bottom:16px;color:#2b6cb0;font-weight:700;letter-spacing:-.5px}
-
-/* 상태 배너 */
 .sb{text-align:center;padding:16px;border-radius:14px;margin-bottom:14px;
 font-size:1.8em;font-weight:700;box-shadow:0 4px 15px rgba(0,0,0,.1)}
 .safe{background:linear-gradient(135deg,#38a169,#48bb78);color:white}
@@ -93,8 +147,6 @@ font-size:1.8em;font-weight:700;box-shadow:0 4px 15px rgba(0,0,0,.1)}
 .emergency{background:linear-gradient(135deg,#822727,#c53030);color:white;
 animation:bk .4s infinite}
 @keyframes bk{0%,100%{opacity:1}50%{opacity:.6}}
-
-/* 카드 */
 .g2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
 .g4{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px;margin-bottom:12px}
 .card{background:white;border-radius:12px;padding:14px;text-align:center;
@@ -103,8 +155,6 @@ box-shadow:0 2px 10px rgba(0,0,0,.07);border:1px solid #e2e8f0}
 .vl{font-size:1.7em;font-weight:700;color:#2b6cb0;min-height:36px;
 display:flex;align-items:center;justify-content:center}
 .mx{color:#e53e3e}.mn{color:#38a169}.dc{color:#d69e2e}.tm{color:#805ad5}
-
-/* 단계 표시 */
 .lg{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;margin-bottom:12px}
 .li{border-radius:10px;padding:8px 4px;text-align:center;font-size:.72em;
 font-weight:700;box-shadow:0 2px 8px rgba(0,0,0,.08)}
@@ -112,8 +162,6 @@ font-weight:700;box-shadow:0 2px 8px rgba(0,0,0,.08)}
 .lc{background:linear-gradient(135deg,#fefcbf,#faf089);color:#744210}
 .ld{background:linear-gradient(135deg,#fed7d7,#feb2b2);color:#822727}
 .le{background:linear-gradient(135deg,#822727,#c53030);color:white}
-
-/* LED 박스 */
 .led-box{background:white;border-radius:12px;padding:14px;
 box-shadow:0 2px 10px rgba(0,0,0,.07);border:1px solid #e2e8f0;
 margin-bottom:12px;text-align:center}
@@ -121,14 +169,10 @@ margin-bottom:12px;text-align:center}
 .led-row{display:flex;justify-content:center;gap:10px}
 .led-dot{width:30px;height:30px;border-radius:50%;background:#e2e8f0;
 border:2px solid #cbd5e0;transition:all .3s}
-
-/* 그래프 */
 .cb{background:white;border-radius:14px;padding:18px;
 box-shadow:0 2px 10px rgba(0,0,0,.07);border:1px solid #e2e8f0;margin-bottom:12px}
 .ct{color:#4a5568;font-size:.85em;margin-bottom:10px;font-weight:700}
 canvas{display:block;width:100%}
-
-/* 임계값 설정 */
 .tb{background:white;border-radius:12px;padding:14px;
 box-shadow:0 2px 10px rgba(0,0,0,.07);border:1px solid #e2e8f0;margin-bottom:12px}
 .tb h3{color:#2b6cb0;font-size:.88em;margin-bottom:3px;font-weight:700}
@@ -145,10 +189,9 @@ border:none;border-radius:8px;color:white;font-size:.88em;cursor:pointer;font-we
 .bd{padding:10px;background:linear-gradient(135deg,#dd6b20,#ed8936);
 border:none;border-radius:8px;color:white;font-size:.88em;cursor:pointer;font-weight:600}
 .bd:hover{background:linear-gradient(135deg,#c05621,#dd6b20)}
-.rb{width:100%;padding:9px;
-background:linear-gradient(135deg,#e53e3e,#fc8181);
-border:none;border-radius:8px;color:white;
-font-size:.83em;cursor:pointer;margin-bottom:12px;font-weight:600}
+.rb{width:100%;padding:9px;background:linear-gradient(135deg,#e53e3e,#fc8181);
+border:none;border-radius:8px;color:white;font-size:.83em;cursor:pointer;
+margin-bottom:12px;font-weight:600}
 .rb:hover{background:linear-gradient(135deg,#c53030,#e53e3e)}
 .cs{text-align:center;font-size:.73em;padding:5px;border-radius:8px}
 .ok{color:#38a169;background:#f0fff4;border:1px solid #c6f6d5}
@@ -266,11 +309,7 @@ function draw(){
 var W=cv.offsetWidth||800,H=340;
 cv.width=W;cv.height=H;
 var PL=46,PR=12,PT=18,PB=42,GW=W-PL-PR,GH=H-PT-PB;
-
-// 밝은 배경
 cx.fillStyle='#f7fafc';cx.fillRect(0,0,W,H);
-
-// 그리드
 [0,10,20,30,40,50,60,70,80,90,100].forEach(function(p){
 var y=PT+GH-(p/100)*GH;
 cx.strokeStyle=p%25===0?'#cbd5e0':'#edf2f7';
@@ -279,8 +318,6 @@ cx.beginPath();cx.moveTo(PL,y);cx.lineTo(PL+GW,y);cx.stroke();
 cx.fillStyle=p%25===0?'#4a5568':'#a0aec0';
 cx.font=p%25===0?'bold 11px sans-serif':'9px sans-serif';
 cx.textAlign='right';cx.fillText(p+'%',PL-5,y+4);});
-
-// 임계선
 [{p:th.caution,c:'rgba(214,158,46,.8)',t:'주의'+th.caution+'%'},
 {p:th.danger,c:'rgba(229,62,62,.8)',t:'위험'+th.danger+'%'},
 {p:th.emergency,c:'rgba(130,39,39,1)',t:'긴급'+th.emergency+'%'}
@@ -290,12 +327,9 @@ cx.strokeStyle=ln.c;cx.lineWidth=1.8;cx.setLineDash([7,5]);
 cx.beginPath();cx.moveTo(PL,y);cx.lineTo(PL+GW,y);cx.stroke();
 cx.setLineDash([]);cx.fillStyle=ln.c;cx.font='bold 10px sans-serif';
 cx.textAlign='left';cx.fillText(ln.t,PL+5,y-4);});
-
 if(da.length<2){
 cx.fillStyle='#a0aec0';cx.font='15px sans-serif';cx.textAlign='center';
 cx.fillText('데이터 수집 중...',W/2,H/2);return;}
-
-// 면적
 cx.beginPath();
 da.forEach(function(v,i){
 var x=PL+(i/(MX-1))*GW,y=PT+GH-(v/100)*GH;
@@ -306,16 +340,12 @@ var g=cx.createLinearGradient(0,PT,0,PT+GH);
 g.addColorStop(0,'rgba(66,153,225,.3)');
 g.addColorStop(1,'rgba(66,153,225,.02)');
 cx.fillStyle=g;cx.fill();
-
-// 실선
 cx.beginPath();cx.strokeStyle='#3182ce';cx.lineWidth=2.8;
 cx.lineJoin='round';cx.lineCap='round';
 da.forEach(function(v,i){
 var x=PL+(i/(MX-1))*GW,y=PT+GH-(v/100)*GH;
 i===0?cx.moveTo(x,y):cx.lineTo(x,y);});
 cx.stroke();
-
-// 최신 점
 var lv=da[da.length-1];
 var lxp=PL+((da.length-1)/(MX-1))*GW;
 var lyp=PT+GH-(lv/100)*GH;
@@ -324,8 +354,6 @@ cx.fillStyle='#3182ce';cx.fill();
 cx.strokeStyle='white';cx.lineWidth=2;cx.stroke();
 cx.fillStyle='#2d3748';cx.font='bold 12px sans-serif';
 cx.textAlign='center';cx.fillText(lv+'%',lxp,lyp-12);
-
-// 시간축
 var step=Math.max(1,Math.floor(da.length/6));
 for(var i=0;i<da.length;i+=step){
 var x=PL+(i/(MX-1))*GW;
@@ -531,16 +559,27 @@ def handle_request(conn):
     finally:
         conn.close()
 
+# =============================================
+# 메인 실행
+# =============================================
 print("="*40)
 print("  약품 실험실 스마트 안전 관리 시스템")
 print("  Raspberry Pi Pico 2 WH + MQ2 센서")
 print("="*40)
 
-led_set_all(0,80,0); time.sleep(1); led_off()
+# ✅ 1단계: 흰색 켜기 (연결 전)
+led_set_all(80, 80, 80)
+print("Wi-Fi 연결 중...")
 
-ip=connect_wifi()
+ip = connect_wifi()
 if ip is None:
-    print("Wi-Fi 연결 실패!"); raise SystemExit
+    print("Wi-Fi 연결 실패!")
+    led_set_all(80, 0, 0)  # 실패 → 빨강
+    raise SystemExit
+
+# ✅ 2단계: Wi-Fi 연결 성공 → 무지개 파도타기!
+print("무지개 애니메이션!")
+startup_animation()
 
 server=socket.socket(socket.AF_INET,socket.SOCK_STREAM)
 server.setsockopt(socket.SOL_SOCKET,socket.SO_REUSEADDR,1)
