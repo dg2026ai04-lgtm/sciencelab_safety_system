@@ -18,20 +18,17 @@ led      = neopixel.NeoPixel(Pin(16), NUM_LEDS, timing=TIMING)
 # =============================================
 # 전역 변수
 # =============================================
-sensor_data    = []   # 측정값 저장
-time_data      = []   # 시간 저장
-MAX_DATA       = 60   # 최대 저장 개수
+sensor_data  = []
+MAX_DATA     = 60
+max_percent  = 0.0
+min_percent  = 100.0
+danger_count = 0
+start_time   = time.time()
 
-max_percent    = 0.0  # 최고값
-min_percent    = 100.0 # 최저값
-danger_count   = 0    # 위험 발생 횟수
-start_time     = time.time()  # 시작 시간
-
-# ✅ 임계값 (웹에서 변경 가능!)
 threshold = {
-    "caution"  : 46,   # 주의 기준 %
-    "danger"   : 69,   # 위험 기준 %
-    "emergency": 87    # 긴급 기준 %
+    "caution"  : 46,
+    "danger"   : 69,
+    "emergency": 87
 }
 
 # =============================================
@@ -84,19 +81,18 @@ def get_gas_percentage(raw):
     return round((raw / 65535) * 100, 1)
 
 def get_status(percent):
-    if percent < threshold["caution"]:   return "safe"
-    elif percent < threshold["danger"]:  return "caution"
+    if percent < threshold["caution"]:     return "safe"
+    elif percent < threshold["danger"]:    return "caution"
     elif percent < threshold["emergency"]: return "danger"
-    else:                                return "emergency"
+    else:                                  return "emergency"
 
 def get_status_korean(percent):
-    if percent < threshold["caution"]:   return "안전"
-    elif percent < threshold["danger"]:  return "주의"
+    if percent < threshold["caution"]:     return "안전"
+    elif percent < threshold["danger"]:    return "주의"
     elif percent < threshold["emergency"]: return "위험"
-    else:                                return "긴급"
+    else:                                  return "긴급"
 
 def get_elapsed():
-    """경과 시간 → 분:초 문자열"""
     e = int(time.time() - start_time)
     return str(e // 60) + ":" + "{:02d}".format(e % 60)
 
@@ -131,7 +127,7 @@ HTML = """<!DOCTYPE html><html lang="ko"><head>
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:sans-serif;background:#0f0f1a;color:white;padding:15px}
 h1{text-align:center;font-size:1.4em;margin-bottom:15px;color:#00d4ff}
-.sb{text-align:center;padding:18px;border-radius:12px;margin-bottom:15px;
+.sb{text-align:center;padding:15px;border-radius:12px;margin-bottom:15px;
 font-size:1.8em;font-weight:bold;border:2px solid transparent}
 .safe{background:#0d3b0d;border-color:#00ff00;color:#00ff00}
 .caution{background:#3b3b0d;border-color:#ffff00;color:#ffff00}
@@ -139,42 +135,45 @@ font-size:1.8em;font-weight:bold;border:2px solid transparent}
 .emergency{background:#5c0000;border-color:#ff0000;color:#ff0000;
 animation:blink .4s infinite}
 @keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
-.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:15px}
-.grid4{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px;margin-bottom:15px}
-.card{background:#16213e;border-radius:10px;padding:15px;text-align:center;
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+.grid4{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px;margin-bottom:12px}
+.card{background:#16213e;border-radius:10px;padding:12px;text-align:center;
 border:1px solid #2a2a5a}
-.lbl{font-size:.8em;color:#888;margin-bottom:8px}
-.val{font-size:1.8em;font-weight:bold;color:#00d4ff;min-height:40px;
+.lbl{font-size:.78em;color:#888;margin-bottom:6px}
+.val{font-size:1.7em;font-weight:bold;color:#00d4ff;min-height:38px;
 display:flex;align-items:center;justify-content:center}
 .val-max{color:#ff4444}
 .val-min{color:#00ff00}
 .val-cnt{color:#ffaa00}
 .val-time{color:#aaaaff}
-.lgrid{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:6px;margin-bottom:15px}
-.li{border-radius:6px;padding:8px 4px;text-align:center;font-size:.72em;font-weight:bold}
+.lgrid{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:6px;margin-bottom:12px}
+.li{border-radius:6px;padding:7px 4px;text-align:center;font-size:.72em;font-weight:bold}
 .ls{background:#0d3b0d;color:#00ff00}
 .lc{background:#3b3b0d;color:#ffff00}
 .ld{background:#3b0d0d;color:#ff4444}
 .le{background:#5c0000;color:#ff6666}
-.cbox{background:#16213e;border-radius:10px;padding:15px;
-border:1px solid #2a2a5a;margin-bottom:15px}
-.ct{color:#aaa;font-size:.85em;margin-bottom:8px}
+
+/* ✅ 그래프 영역 크게! */
+.cbox{background:#16213e;border-radius:12px;padding:20px;
+border:1px solid #2a2a5a;margin-bottom:12px}
+.ct{color:#aaa;font-size:.88em;margin-bottom:10px;font-weight:bold}
+canvas{display:block;width:100%}
+
 .tbox{background:#16213e;border-radius:10px;padding:15px;
-border:1px solid #2a2a5a;margin-bottom:15px}
-.tbox h3{color:#00d4ff;font-size:.95em;margin-bottom:12px}
+border:1px solid #2a2a5a;margin-bottom:12px}
+.tbox h3{color:#00d4ff;font-size:.92em;margin-bottom:12px}
 .trow{display:flex;align-items:center;gap:10px;margin-bottom:10px}
-.trow label{color:#aaa;font-size:.85em;width:80px}
-.trow input{flex:1;background:#0f0f1a;border:1px solid #2a2a5a;
-border-radius:6px;color:white;padding:6px 10px;font-size:.9em}
-.trow span{color:#00d4ff;font-size:.85em;width:50px}
+.trow label{color:#aaa;font-size:.82em;width:55px;flex-shrink:0}
+.trow input[type=range]{flex:1;accent-color:#00d4ff;height:6px}
+.trow span{color:#00d4ff;font-size:.85em;width:40px;text-align:right}
 .tbtn{width:100%;padding:10px;background:#1a3a5c;border:1px solid #00d4ff;
-border-radius:8px;color:#00d4ff;font-size:.95em;cursor:pointer;margin-top:5px}
+border-radius:8px;color:#00d4ff;font-size:.92em;cursor:pointer;margin-top:5px}
 .tbtn:hover{background:#0d4a7a}
-.cs{text-align:center;font-size:.75em;margin-top:8px}
-.ok{color:#00ff00}.er{color:#ff4444}
 .reset-btn{width:100%;padding:8px;background:#3b0d0d;border:1px solid #ff4444;
-border-radius:8px;color:#ff4444;font-size:.85em;cursor:pointer;margin-bottom:15px}
+border-radius:8px;color:#ff4444;font-size:.85em;cursor:pointer;margin-bottom:12px}
 .reset-btn:hover{background:#5c1010}
+.cs{text-align:center;font-size:.75em;margin-top:8px;padding:5px}
+.ok{color:#00ff00}.er{color:#ff4444}
 </style></head><body>
 <h1>💊🧪 약품 실험실 안전 모니터링</h1>
 <div class="sb safe" id="sb">🟢 안전</div>
@@ -204,6 +203,12 @@ border-radius:8px;color:#ff4444;font-size:.85em;cursor:pointer;margin-bottom:15p
 <div class="li le">🚨 긴급</div>
 </div>
 
+<!-- ✅ 그래프 먼저! 크게! -->
+<div class="cbox">
+<div class="ct">📈 실시간 가스 농도 그래프</div>
+<canvas id="cv" height="380"></canvas>
+</div>
+
 <div class="tbox">
 <h3>⚙️ 위험 임계값 설정</h3>
 <div class="trow">
@@ -225,11 +230,6 @@ oninput="document.getElementById('v3').textContent=this.value+'%'">
 </div>
 
 <button class="reset-btn" onclick="resetData()">🔄 데이터 초기화</button>
-
-<div class="cbox">
-<div class="ct">📈 실시간 가스 농도 그래프 (시간축 포함)</div>
-<canvas id="cv" height="280"></canvas>
-</div>
 <div class="cs" id="cs">연결 중...</div>
 
 <script>
@@ -241,66 +241,94 @@ var MX=60;
 var th={caution:46,danger:69,emergency:87};
 
 function draw(){
-var W=cv.offsetWidth||700,H=280;
+var W=cv.offsetWidth||900;
+var H=380;
 cv.width=W;cv.height=H;
-var PL=45,PR=10,PT=15,PB=35,GW=W-PL-PR,GH=H-PT-PB;
-cx.fillStyle='#16213e';cx.fillRect(0,0,W,H);
+var PL=48,PR=15,PT=20,PB=45,GW=W-PL-PR,GH=H-PT-PB;
 
-// 그리드
-[0,25,50,75,100].forEach(function(p){
+// 배경
+cx.fillStyle='#0d1526';cx.fillRect(0,0,W,H);
+
+// 그리드 가로선
+[0,10,20,30,40,50,60,70,80,90,100].forEach(function(p){
 var y=PT+GH-(p/100)*GH;
-cx.strokeStyle='#1e2a4a';cx.lineWidth=1;
+cx.strokeStyle= p%25===0 ? '#1e2a4a' : '#131d33';
+cx.lineWidth=1;
 cx.beginPath();cx.moveTo(PL,y);cx.lineTo(PL+GW,y);cx.stroke();
-cx.fillStyle='#555';cx.font='10px sans-serif';
-cx.textAlign='right';cx.fillText(p+'%',PL-3,y+4);});
+cx.fillStyle= p%25===0 ? '#666' : '#333';
+cx.font= p%25===0 ? 'bold 11px sans-serif' : '9px sans-serif';
+cx.textAlign='right';
+cx.fillText(p+'%',PL-5,y+4);});
 
 // 임계선
 [
-{p:th.caution,c:'rgba(255,255,0,.6)',t:'주의'},
-{p:th.danger,c:'rgba(255,80,80,.6)',t:'위험'},
-{p:th.emergency,c:'rgba(255,0,0,.9)',t:'긴급'}
+{p:th.caution,  c:'rgba(255,220,0,.7)', t:'주의 '+th.caution+'%'},
+{p:th.danger,   c:'rgba(255,80,80,.7)', t:'위험 '+th.danger+'%'},
+{p:th.emergency,c:'rgba(255,0,0,1)',    t:'긴급 '+th.emergency+'%'}
 ].forEach(function(ln){
 var y=PT+GH-(ln.p/100)*GH;
-cx.strokeStyle=ln.c;cx.lineWidth=1.5;cx.setLineDash([5,4]);
+cx.strokeStyle=ln.c;cx.lineWidth=1.8;cx.setLineDash([7,5]);
 cx.beginPath();cx.moveTo(PL,y);cx.lineTo(PL+GW,y);cx.stroke();
-cx.setLineDash([]);cx.fillStyle=ln.c;cx.font='9px sans-serif';
-cx.textAlign='left';cx.fillText(ln.t+ln.p+'%',PL+3,y-3);});
+cx.setLineDash([]);
+cx.fillStyle=ln.c;cx.font='bold 10px sans-serif';
+cx.textAlign='left';cx.fillText(ln.t,PL+6,y-5);});
 
-if(da.length<2)return;
+if(da.length<2){
+// 데이터 없을 때 안내
+cx.fillStyle='#333';cx.font='16px sans-serif';
+cx.textAlign='center';
+cx.fillText('데이터 수집 중...', W/2, H/2);
+return;}
 
-// 면적
+// 면적 채우기
 cx.beginPath();
 da.forEach(function(v,i){
-var x=PL+(i/(MX-1))*GW,y=PT+GH-(v/100)*GH;
+var x=PL+(i/(MX-1))*GW;
+var y=PT+GH-(v/100)*GH;
 i===0?cx.moveTo(x,y):cx.lineTo(x,y);});
 var lx=PL+((da.length-1)/(MX-1))*GW;
 cx.lineTo(lx,PT+GH);cx.lineTo(PL,PT+GH);cx.closePath();
-cx.fillStyle='rgba(0,212,255,.08)';cx.fill();
+var grad=cx.createLinearGradient(0,PT,0,PT+GH);
+grad.addColorStop(0,'rgba(0,212,255,0.25)');
+grad.addColorStop(1,'rgba(0,212,255,0.01)');
+cx.fillStyle=grad;cx.fill();
 
 // 실선
-cx.beginPath();cx.strokeStyle='#00d4ff';cx.lineWidth=2.5;
+cx.beginPath();
+cx.strokeStyle='#00d4ff';cx.lineWidth=2.8;
+cx.lineJoin='round';cx.lineCap='round';
 da.forEach(function(v,i){
-var x=PL+(i/(MX-1))*GW,y=PT+GH-(v/100)*GH;
+var x=PL+(i/(MX-1))*GW;
+var y=PT+GH-(v/100)*GH;
 i===0?cx.moveTo(x,y):cx.lineTo(x,y);});
 cx.stroke();
 
-// 최신 점
+// 최신 점 + 값
 var lv=da[da.length-1];
 var lxp=PL+((da.length-1)/(MX-1))*GW;
 var lyp=PT+GH-(lv/100)*GH;
-cx.beginPath();cx.arc(lxp,lyp,5,0,Math.PI*2);
+cx.beginPath();cx.arc(lxp,lyp,6,0,Math.PI*2);
 cx.fillStyle='#00d4ff';cx.fill();
-cx.fillStyle='#00d4ff';cx.font='bold 11px sans-serif';
-cx.textAlign='center';cx.fillText(lv+'%',lxp,lyp-10);
+cx.strokeStyle='#0f0f1a';cx.lineWidth=2;
+cx.stroke();
+cx.fillStyle='white';cx.font='bold 13px sans-serif';
+cx.textAlign='center';
+cx.fillText(lv+'%',lxp,lyp-12);
 
 // 시간축
-cx.fillStyle='#555';cx.font='9px sans-serif';cx.textAlign='center';
-var step=Math.floor(da.length/5)||1;
+cx.fillStyle='#555';cx.font='10px sans-serif';cx.textAlign='center';
+var labelCount=6;
+var step=Math.max(1,Math.floor(da.length/labelCount));
 for(var i=0;i<da.length;i+=step){
 var x=PL+(i/(MX-1))*GW;
-var t=ta[i]||'';
-cx.fillText(t,x,PT+GH+20);}
-}
+cx.fillStyle='#444';cx.lineWidth=1;
+cx.beginPath();cx.moveTo(x,PT+GH);cx.lineTo(x,PT+GH+5);cx.stroke();
+cx.fillStyle='#666';
+cx.fillText(ta[i]||'',x,PT+GH+18);}
+
+// X축 선
+cx.strokeStyle='#2a2a5a';cx.lineWidth=1;
+cx.beginPath();cx.moveTo(PL,PT+GH);cx.lineTo(PL+GW,PT+GH);cx.stroke();}
 
 var SC={
 safe:{c:'sb safe',t:'🟢 안전'},
@@ -422,13 +450,10 @@ def send_data(conn):
     percent = get_gas_percentage(raw)
     status  = get_status(percent)
 
-    # ✅ 최고/최저값 갱신
     if percent > max_percent:
         max_percent = percent
     if percent < min_percent:
         min_percent = percent
-
-    # ✅ 위험 횟수 카운트
     if status in ("danger", "emergency"):
         danger_count += 1
 
@@ -442,16 +467,16 @@ def send_data(conn):
     elapsed = get_elapsed()
 
     body = (
-        '{"raw":'      + str(raw) +
-        ',"percent":'  + str(percent) +
-        ',"status":"'  + status + '"' +
-        ',"max_p":'    + str(max_percent) +
-        ',"min_p":'    + str(min_percent) +
+        '{"raw":'        + str(raw) +
+        ',"percent":'    + str(percent) +
+        ',"status":"'    + status + '"' +
+        ',"max_p":'      + str(max_percent) +
+        ',"min_p":'      + str(min_percent) +
         ',"danger_cnt":' + str(danger_count) +
-        ',"elapsed":"' + elapsed + '"' +
-        ',"threshold":{"caution":'   + str(threshold["caution"]) +
-        ',"danger":'                 + str(threshold["danger"]) +
-        ',"emergency":'              + str(threshold["emergency"]) + '}}'
+        ',"elapsed":"'   + elapsed + '"' +
+        ',"threshold":{"caution":'    + str(threshold["caution"]) +
+        ',"danger":'                  + str(threshold["danger"]) +
+        ',"emergency":'               + str(threshold["emergency"]) + '}}'
     )
     body_bytes = body.encode('utf-8')
     header = (
