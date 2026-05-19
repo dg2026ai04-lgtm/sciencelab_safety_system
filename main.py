@@ -11,7 +11,6 @@ from wifi_config import WIFI_SSID, WIFI_PASSWORD
 # =============================================
 gas_sensor = ADC(Pin(26))
 
-# ✅ 네오픽셀 설정
 TIMING   = (280, 515, 515, 745)
 NUM_LEDS = 10
 led      = neopixel.NeoPixel(Pin(16), NUM_LEDS, timing=TIMING)
@@ -33,22 +32,41 @@ def led_set_all(r, g, b):
     led.write()
 
 def update_led(raw):
-    if raw < 30000:
-        # 안전 → 초록
-        led_set_all(0, 80, 0)
-    elif raw < 45000:
-        # 주의 → 노랑
-        led_set_all(80, 80, 0)
-    elif raw < 57000:
-        # 위험 → 빨강
-        led_set_all(80, 0, 0)
-    else:
-        # 긴급 → 빨강 빠르게 깜빡임
+    percent = get_gas_percentage(raw)
+
+    # ✅ 긴급 → 빨강 전체 깜빡!
+    if percent >= 87:
         for _ in range(3):
             led_set_all(150, 0, 0)
             time.sleep(0.05)
             led_off()
             time.sleep(0.05)
+        return
+
+    # ✅ 켜지는 LED 개수 (농도에 비례)
+    count = int((percent / 100) * NUM_LEDS) + 1
+    count = min(count, NUM_LEDS)
+
+    # ✅ 색상 그라데이션
+    # 초록 → 노랑 → 빨강
+    if percent < 50:
+        ratio = percent / 50
+        r = int(255 * ratio * 0.3)
+        g = int(255 * 0.3)
+        b = 0
+    else:
+        ratio = (percent - 50) / 50
+        r = int(255 * 0.3)
+        g = int(255 * (1 - ratio) * 0.3)
+        b = 0
+
+    # ✅ count 개수만큼 켜기
+    for i in range(NUM_LEDS):
+        if i < count:
+            led[i] = (r, g, b)
+        else:
+            led[i] = (2, 2, 2)  # 거의 꺼진 상태
+    led.write()
 
 # =============================================
 # 센서값 변환
@@ -326,7 +344,7 @@ print("  약품 실험실 스마트 안전 관리 시스템")
 print("  Raspberry Pi Pico 2 WH + MQ2 센서")
 print("=" * 40)
 
-# 시작할 때 LED 초록으로 켜서 정상 작동 확인!
+# 시작 확인 → 초록 1초
 led_set_all(0, 80, 0)
 time.sleep(1)
 led_off()
