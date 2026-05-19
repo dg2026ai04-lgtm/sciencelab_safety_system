@@ -152,28 +152,37 @@ display:flex;align-items:center;justify-content:center}
 .lc{background:#3b3b0d;color:#ffff00}
 .ld{background:#3b0d0d;color:#ff4444}
 .le{background:#5c0000;color:#ff6666}
-
-/* ✅ 그래프 영역 크게! */
 .cbox{background:#16213e;border-radius:12px;padding:20px;
 border:1px solid #2a2a5a;margin-bottom:12px}
 .ct{color:#aaa;font-size:.88em;margin-bottom:10px;font-weight:bold}
 canvas{display:block;width:100%}
-
 .tbox{background:#16213e;border-radius:10px;padding:15px;
 border:1px solid #2a2a5a;margin-bottom:12px}
-.tbox h3{color:#00d4ff;font-size:.92em;margin-bottom:12px}
-.trow{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.tbox h3{color:#00d4ff;font-size:.92em;margin-bottom:4px}
+.tbox p{color:#666;font-size:.75em;margin-bottom:12px}
+.trow{display:flex;align-items:center;gap:10px;margin-bottom:12px}
 .trow label{color:#aaa;font-size:.82em;width:55px;flex-shrink:0}
-.trow input[type=range]{flex:1;accent-color:#00d4ff;height:6px}
-.trow span{color:#00d4ff;font-size:.85em;width:40px;text-align:right}
-.tbtn{width:100%;padding:10px;background:#1a3a5c;border:1px solid #00d4ff;
-border-radius:8px;color:#00d4ff;font-size:.92em;cursor:pointer;margin-top:5px}
+.trow input[type=range]{flex:1;accent-color:#00d4ff;height:6px;cursor:pointer}
+.trow span{font-size:.9em;width:45px;text-align:right;font-weight:bold}
+.v1{color:#ffff00}
+.v2{color:#ff4444}
+.v3{color:#ff0000}
+.btn-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:5px}
+.tbtn{padding:11px;background:#1a3a5c;border:1px solid #00d4ff;
+border-radius:8px;color:#00d4ff;font-size:.9em;cursor:pointer}
 .tbtn:hover{background:#0d4a7a}
-.reset-btn{width:100%;padding:8px;background:#3b0d0d;border:1px solid #ff4444;
+.dbtn{padding:11px;background:#2a1a0d;border:1px solid #ffaa00;
+border-radius:8px;color:#ffaa00;font-size:.9em;cursor:pointer}
+.dbtn:hover{background:#3a2a0d}
+.reset-btn{width:100%;padding:9px;background:#3b0d0d;border:1px solid #ff4444;
 border-radius:8px;color:#ff4444;font-size:.85em;cursor:pointer;margin-bottom:12px}
 .reset-btn:hover{background:#5c1010}
 .cs{text-align:center;font-size:.75em;margin-top:8px;padding:5px}
 .ok{color:#00ff00}.er{color:#ff4444}
+/* ✅ 적용 대기 중 표시 */
+.pending{border-color:#ffaa00 !important;background:#2a2a0d !important}
+.pending-txt{color:#ffaa00;font-size:.75em;text-align:center;
+margin-top:6px;display:none}
 </style></head><body>
 <h1>💊🧪 약품 실험실 안전 모니터링</h1>
 <div class="sb safe" id="sb">🟢 안전</div>
@@ -196,71 +205,107 @@ border-radius:8px;color:#ff4444;font-size:.85em;cursor:pointer;margin-bottom:12p
 <div class="val val-time" id="et">0:00</div></div>
 </div>
 
-<div class="lgrid">
-<div class="li ls">🟢 안전</div>
-<div class="li lc">🟡 주의</div>
-<div class="li ld">🔴 위험</div>
-<div class="li le">🚨 긴급</div>
+<div class="lgrid" id="lgrid">
+<div class="li ls">🟢 안전<br><span id="lr1">0~46%</span></div>
+<div class="li lc">🟡 주의<br><span id="lr2">46~69%</span></div>
+<div class="li ld">🔴 위험<br><span id="lr3">69~87%</span></div>
+<div class="li le">🚨 긴급<br><span id="lr4">87%~</span></div>
 </div>
 
-<!-- ✅ 그래프 먼저! 크게! -->
 <div class="cbox">
 <div class="ct">📈 실시간 가스 농도 그래프</div>
 <canvas id="cv" height="380"></canvas>
 </div>
 
-<div class="tbox">
+<div class="tbox" id="tbox">
 <h3>⚙️ 위험 임계값 설정</h3>
+<p>슬라이더를 조절한 후 ✅ 적용 버튼을 눌러주세요</p>
 <div class="trow">
 <label>🟡 주의</label>
 <input type="range" id="s1" min="10" max="60" value="46"
-oninput="document.getElementById('v1').textContent=this.value+'%'">
-<span id="v1">46%</span></div>
+oninput="onSlide(1,this.value)">
+<span class="v1" id="v1">46%</span></div>
 <div class="trow">
 <label>🔴 위험</label>
 <input type="range" id="s2" min="30" max="80" value="69"
-oninput="document.getElementById('v2').textContent=this.value+'%'">
-<span id="v2">69%</span></div>
+oninput="onSlide(2,this.value)">
+<span class="v2" id="v2">69%</span></div>
 <div class="trow">
 <label>🚨 긴급</label>
 <input type="range" id="s3" min="50" max="95" value="87"
-oninput="document.getElementById('v3').textContent=this.value+'%'">
-<span id="v3">87%</span></div>
+oninput="onSlide(3,this.value)">
+<span class="v3" id="v3">87%</span></div>
+<div class="pending-txt" id="ptxt">⏳ 변경됨 - 적용 버튼을 눌러주세요!</div>
+<div class="btn-row">
 <button class="tbtn" onclick="setThreshold()">✅ 임계값 적용</button>
+<button class="dbtn" onclick="loadDefault()">↩️ 기본값 복원</button>
+</div>
 </div>
 
-<button class="reset-btn" onclick="resetData()">🔄 데이터 초기화</button>
+<button class="reset-btn" onclick="resetData()">🔄 측정 데이터 초기화</button>
 <div class="cs" id="cs">연결 중...</div>
 
 <script>
 var cv=document.getElementById('cv');
 var cx=cv.getContext('2d');
-var da=[];
-var ta=[];
-var MX=60;
+var da=[];var ta=[];var MX=60;
 var th={caution:46,danger:69,emergency:87};
+
+// ✅ 슬라이더 조작 중인지 플래그
+var sliding=false;
+var slideTimer=null;
+
+// ✅ 로컬스토리지에서 임계값 불러오기
+function loadSaved(){
+var saved=localStorage.getItem('threshold');
+if(saved){
+try{
+var s=JSON.parse(saved);
+th=s;
+applySliderUI(s);
+console.log('저장된 임계값 불러옴',s);
+}catch(e){}}
+}
+
+function applySliderUI(s){
+document.getElementById('s1').value=s.caution;
+document.getElementById('v1').textContent=s.caution+'%';
+document.getElementById('s2').value=s.danger;
+document.getElementById('v2').textContent=s.danger+'%';
+document.getElementById('s3').value=s.emergency;
+document.getElementById('v3').textContent=s.emergency+'%';
+updateRangeLabel(s);}
+
+function updateRangeLabel(s){
+document.getElementById('lr1').textContent='0~'+s.caution+'%';
+document.getElementById('lr2').textContent=s.caution+'~'+s.danger+'%';
+document.getElementById('lr3').textContent=s.danger+'~'+s.emergency+'%';
+document.getElementById('lr4').textContent=s.emergency+'%~';}
+
+// ✅ 슬라이더 움직일 때
+function onSlide(n,v){
+sliding=true;
+document.getElementById('v'+n).textContent=v+'%';
+document.getElementById('ptxt').style.display='block';
+document.getElementById('tbox').classList.add('pending');
+// 5초 후 자동으로 sliding 해제
+if(slideTimer)clearTimeout(slideTimer);
+slideTimer=setTimeout(function(){sliding=false;},5000);}
 
 function draw(){
 var W=cv.offsetWidth||900;
 var H=380;
 cv.width=W;cv.height=H;
 var PL=48,PR=15,PT=20,PB=45,GW=W-PL-PR,GH=H-PT-PB;
-
-// 배경
 cx.fillStyle='#0d1526';cx.fillRect(0,0,W,H);
-
-// 그리드 가로선
 [0,10,20,30,40,50,60,70,80,90,100].forEach(function(p){
 var y=PT+GH-(p/100)*GH;
-cx.strokeStyle= p%25===0 ? '#1e2a4a' : '#131d33';
+cx.strokeStyle=p%25===0?'#1e2a4a':'#131d33';
 cx.lineWidth=1;
 cx.beginPath();cx.moveTo(PL,y);cx.lineTo(PL+GW,y);cx.stroke();
-cx.fillStyle= p%25===0 ? '#666' : '#333';
-cx.font= p%25===0 ? 'bold 11px sans-serif' : '9px sans-serif';
-cx.textAlign='right';
-cx.fillText(p+'%',PL-5,y+4);});
-
-// 임계선
+cx.fillStyle=p%25===0?'#666':'#333';
+cx.font=p%25===0?'bold 11px sans-serif':'9px sans-serif';
+cx.textAlign='right';cx.fillText(p+'%',PL-5,y+4);});
 [
 {p:th.caution,  c:'rgba(255,220,0,.7)', t:'주의 '+th.caution+'%'},
 {p:th.danger,   c:'rgba(255,80,80,.7)', t:'위험 '+th.danger+'%'},
@@ -272,19 +317,13 @@ cx.beginPath();cx.moveTo(PL,y);cx.lineTo(PL+GW,y);cx.stroke();
 cx.setLineDash([]);
 cx.fillStyle=ln.c;cx.font='bold 10px sans-serif';
 cx.textAlign='left';cx.fillText(ln.t,PL+6,y-5);});
-
 if(da.length<2){
-// 데이터 없을 때 안내
 cx.fillStyle='#333';cx.font='16px sans-serif';
-cx.textAlign='center';
-cx.fillText('데이터 수집 중...', W/2, H/2);
+cx.textAlign='center';cx.fillText('데이터 수집 중...',W/2,H/2);
 return;}
-
-// 면적 채우기
 cx.beginPath();
 da.forEach(function(v,i){
-var x=PL+(i/(MX-1))*GW;
-var y=PT+GH-(v/100)*GH;
+var x=PL+(i/(MX-1))*GW,y=PT+GH-(v/100)*GH;
 i===0?cx.moveTo(x,y):cx.lineTo(x,y);});
 var lx=PL+((da.length-1)/(MX-1))*GW;
 cx.lineTo(lx,PT+GH);cx.lineTo(PL,PT+GH);cx.closePath();
@@ -292,41 +331,27 @@ var grad=cx.createLinearGradient(0,PT,0,PT+GH);
 grad.addColorStop(0,'rgba(0,212,255,0.25)');
 grad.addColorStop(1,'rgba(0,212,255,0.01)');
 cx.fillStyle=grad;cx.fill();
-
-// 실선
-cx.beginPath();
-cx.strokeStyle='#00d4ff';cx.lineWidth=2.8;
+cx.beginPath();cx.strokeStyle='#00d4ff';cx.lineWidth=2.8;
 cx.lineJoin='round';cx.lineCap='round';
 da.forEach(function(v,i){
-var x=PL+(i/(MX-1))*GW;
-var y=PT+GH-(v/100)*GH;
+var x=PL+(i/(MX-1))*GW,y=PT+GH-(v/100)*GH;
 i===0?cx.moveTo(x,y):cx.lineTo(x,y);});
 cx.stroke();
-
-// 최신 점 + 값
 var lv=da[da.length-1];
 var lxp=PL+((da.length-1)/(MX-1))*GW;
 var lyp=PT+GH-(lv/100)*GH;
 cx.beginPath();cx.arc(lxp,lyp,6,0,Math.PI*2);
 cx.fillStyle='#00d4ff';cx.fill();
-cx.strokeStyle='#0f0f1a';cx.lineWidth=2;
-cx.stroke();
+cx.strokeStyle='#0f0f1a';cx.lineWidth=2;cx.stroke();
 cx.fillStyle='white';cx.font='bold 13px sans-serif';
-cx.textAlign='center';
-cx.fillText(lv+'%',lxp,lyp-12);
-
-// 시간축
+cx.textAlign='center';cx.fillText(lv+'%',lxp,lyp-12);
 cx.fillStyle='#555';cx.font='10px sans-serif';cx.textAlign='center';
-var labelCount=6;
-var step=Math.max(1,Math.floor(da.length/labelCount));
+var step=Math.max(1,Math.floor(da.length/6));
 for(var i=0;i<da.length;i+=step){
 var x=PL+(i/(MX-1))*GW;
 cx.fillStyle='#444';cx.lineWidth=1;
 cx.beginPath();cx.moveTo(x,PT+GH);cx.lineTo(x,PT+GH+5);cx.stroke();
-cx.fillStyle='#666';
-cx.fillText(ta[i]||'',x,PT+GH+18);}
-
-// X축 선
+cx.fillStyle='#666';cx.fillText(ta[i]||'',x,PT+GH+18);}
 cx.strokeStyle='#2a2a5a';cx.lineWidth=1;
 cx.beginPath();cx.moveTo(PL,PT+GH);cx.lineTo(PL+GW,PT+GH);cx.stroke();}
 
@@ -335,7 +360,6 @@ safe:{c:'sb safe',t:'🟢 안전'},
 caution:{c:'sb caution',t:'🟡 주의'},
 danger:{c:'sb danger',t:'🔴 위험'},
 emergency:{c:'sb emergency',t:'🚨 긴급 대피!'}};
-
 var ec=0;var busy=false;
 
 function fetchData(){
@@ -359,8 +383,7 @@ document.getElementById('mn').textContent=
 d.min_p!==undefined?String(d.min_p)+' %':'--';
 document.getElementById('dc').textContent=
 d.danger_cnt!==undefined?String(d.danger_cnt)+' 회':'0 회';
-document.getElementById('et').textContent=
-d.elapsed||'0:00';
+document.getElementById('et').textContent=d.elapsed||'0:00';
 if(d.status){
 var s=SC[d.status]||SC.safe;
 var sb=document.getElementById('sb');
@@ -370,18 +393,12 @@ var now=new Date();
 var ts=now.getHours()+':'+
 String(now.getMinutes()).padStart(2,'0')+':'+
 String(now.getSeconds()).padStart(2,'0');
-da.push(Number(d.percent));
-ta.push(ts);
+da.push(Number(d.percent));ta.push(ts);
 if(da.length>MX){da.shift();ta.shift();}
 draw();}
-if(d.threshold){
-th=d.threshold;
-document.getElementById('s1').value=th.caution;
-document.getElementById('v1').textContent=th.caution+'%';
-document.getElementById('s2').value=th.danger;
-document.getElementById('v2').textContent=th.danger+'%';
-document.getElementById('s3').value=th.emergency;
-document.getElementById('v3').textContent=th.emergency+'%';}
+// ✅ 슬라이더 조작 중이면 서버값으로 덮어쓰지 않음!
+if(d.threshold && !sliding){
+th=d.threshold;}
 ec=0;
 var now2=new Date().toLocaleTimeString();
 var el=document.getElementById('cs');
@@ -405,6 +422,7 @@ var el=document.getElementById('cs');
 el.className='cs er';el.textContent='❌ 연결실패';};
 xhr.send();}
 
+// ✅ 임계값 적용
 function setThreshold(){
 var c=parseInt(document.getElementById('s1').value);
 var d=parseInt(document.getElementById('s2').value);
@@ -417,11 +435,27 @@ xhr.setRequestHeader('Content-Type','application/json');
 xhr.onreadystatechange=function(){
 if(xhr.readyState===4&&xhr.status===200){
 th={caution:c,danger:d,emergency:e};
-alert('임계값이 적용됐어요! ✅');}};
+// ✅ 로컬스토리지에 저장!
+localStorage.setItem('threshold',JSON.stringify(th));
+sliding=false;
+document.getElementById('ptxt').style.display='none';
+document.getElementById('tbox').classList.remove('pending');
+updateRangeLabel(th);
+draw();
+alert('임계값이 저장됐어요! ✅\n새로고침해도 유지돼요!');}};
 xhr.send(JSON.stringify({caution:c,danger:d,emergency:e}));}
 
+// ✅ 기본값 복원
+function loadDefault(){
+if(!confirm('기본값(주의46% / 위험69% / 긴급87%)으로 복원할까요?'))return;
+var def={caution:46,danger:69,emergency:87};
+applySliderUI(def);
+sliding=true;
+document.getElementById('ptxt').style.display='block';
+document.getElementById('tbox').classList.add('pending');}
+
 function resetData(){
-if(!confirm('데이터를 초기화할까요?'))return;
+if(!confirm('측정 데이터를 초기화할까요?'))return;
 var xhr=new XMLHttpRequest();
 xhr.open('POST','/reset',true);
 xhr.onreadystatechange=function(){
@@ -436,6 +470,7 @@ alert('초기화됐어요! ✅');}};
 xhr.send();}
 
 window.addEventListener('load',function(){
+loadSaved();
 draw();fetchData();setInterval(fetchData,1500);});
 window.addEventListener('resize',draw);
 </script></body></html>"""
